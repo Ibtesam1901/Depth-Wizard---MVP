@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+torch
+torchvision
+transformers
+pillow
+rasterio
+pyproj
+scipy
+scikit-learn
+python-multipart
+opencv-python-headless
+h5py

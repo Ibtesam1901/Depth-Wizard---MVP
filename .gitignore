@@ -1,0 +1,25 @@
+# Node
+node_modules/
+dist/
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# Datasets & Large Files
+data/
+*.h5
+*.tif
+*.tiff
+temp_*
+
+# OS Files
+.DS_Store
+Thumbs.db
