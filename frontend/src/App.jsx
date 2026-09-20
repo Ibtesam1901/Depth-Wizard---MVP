@@ -76,11 +76,11 @@ function App() {
           {result && (
             <div className="metrics-panel">
               <h3>Image Information</h3>
-              <ul style={{textAlign: 'left', listStyle: 'none', padding: 0, fontSize: '0.9em', marginBottom: '20px'}}>
-                <li><strong>Width:</strong> {result.width}</li>
-                <li><strong>Height:</strong> {result.height}</li>
-                <li><strong>Format:</strong> {result.is_h5 ? 'HDF5 (GAMUS)' : result.is_geotiff ? 'GeoTIFF' : 'Standard Image'}</li>
-                <li><strong>Georeferenced:</strong> {result.is_geotiff ? '✅ Yes' : '❌ No'}</li>
+              <ul className="info-list" style={{listStyle: 'none', padding: 0, fontSize: '0.9em', color: 'var(--text-muted)'}}>
+                <li><strong style={{color: 'var(--text-main)'}}>Width:</strong> {result.width}</li>
+                <li><strong style={{color: 'var(--text-main)'}}>Height:</strong> {result.height}</li>
+                <li><strong style={{color: 'var(--text-main)'}}>Format:</strong> {result.is_h5 ? 'HDF5 (GAMUS)' : result.is_geotiff ? 'GeoTIFF' : 'Standard Image'}</li>
+                <li><strong style={{color: 'var(--text-main)'}}>Georeferenced:</strong> {result.is_geotiff ? '✅ Yes' : '❌ No'}</li>
               </ul>
               
               <h3>DSM Analysis</h3>
@@ -157,7 +157,7 @@ function App() {
                   <button className={viewerMode === 'fly' ? 'active' : ''} onClick={() => setViewerMode('fly')}>▶ Flythrough</button>
                   <button className={viewerMode === 'measure_height' ? 'active' : ''} onClick={() => setViewerMode('measure_height')}>Measure Height</button>
                   <button className={viewerMode === 'measure_slope' ? 'active' : ''} onClick={() => setViewerMode('measure_slope')}>Measure Slope</button>
-                  <select value={textureMode} onChange={(e) => setTextureMode(e.target.value)} style={{marginLeft: 'auto', padding: '4px 8px', borderRadius: '4px', background: '#333', color: 'white'}}>
+                  <select value={textureMode} onChange={(e) => setTextureMode(e.target.value)}>
                     <option value="rgb">RGB Texture</option>
                     <option value="confidence">Confidence Map</option>
                   </select>
