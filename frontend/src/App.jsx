@@ -16,12 +16,22 @@ function App() {
   const [lightbox, setLightbox] = useState(null) // { title, src }
   const [wireframe, setWireframe] = useState(false)
   const [resetTrigger, setResetTrigger] = useState(0)
+  const [zExaggeration, setZExaggeration] = useState(1.0)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [dragOverSource, setDragOverSource] = useState(false)
+  const [processingStep, setProcessingStep] = useState(1)
 
   const handleUpload = async (e) => {
-    e.preventDefault()
+    e?.preventDefault?.()
     if (!file) return
 
     setProcessing(true)
+    setProcessingStep(1)
+
+    // Simulate multi-step progress animation for superior user feedback
+    const stepTimer1 = setTimeout(() => setProcessingStep(2), 700)
+    const stepTimer2 = setTimeout(() => setProcessingStep(3), 1800)
+    const stepTimer3 = setTimeout(() => setProcessingStep(4), 2900)
     const formData = new FormData()
     formData.append('file', file)
     if (referenceFile) {
@@ -43,6 +53,9 @@ function App() {
       console.error('Upload failed:', error)
       alert(`Processing failed: ${error.message}. Please make sure the backend is running.`)
     } finally {
+      clearTimeout(stepTimer1)
+      clearTimeout(stepTimer2)
+      clearTimeout(stepTimer3)
       setProcessing(false)
     }
   }
@@ -121,18 +134,56 @@ function App() {
     <div className="app-shell">
       {/* Top Navigation Bar */}
       <header className="top-navbar">
-        <div className="nav-brand">
-          <div className="brand-logo">
+        <div className="nav-left-cluster">
+          <button 
+            className={`sidebar-toggle-btn ${sidebarCollapsed ? 'collapsed' : ''}`}
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar to Maximize Canvas"}
+            aria-label="Toggle sidebar"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polygon points="12 2 2 7 12 12 22 7 12 2" />
-              <polyline points="2 17 12 22 22 17" />
-              <polyline points="2 12 12 17 22 12" />
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
             </svg>
+          </button>
+
+          <div className="nav-brand">
+            <div className="brand-logo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
+            </div>
+            <div className="brand-title">
+              <h1>DepthWizard</h1>
+              <span className="brand-badge">ISRO 26175 • Monocular 3D DSM</span>
+            </div>
           </div>
-          <div className="brand-title">
-            <h1>DepthWizard</h1>
-            <span className="brand-badge">ISRO 26175 • AI Satellite DSM</span>
-          </div>
+        </div>
+
+        <div className="nav-center-cluster">
+          {processing ? (
+            <div className="status-pill active-inference">
+              <span className="pulsing-radar"></span>
+              <span>Running Step {processingStep}/4: {
+                processingStep === 1 ? 'Ingesting Raster Data...' :
+                processingStep === 2 ? 'Depth Backbone Inference...' :
+                processingStep === 3 ? 'Calibrating Metric Scale...' :
+                'Synthesizing 3D Topography...'
+              }</span>
+            </div>
+          ) : result ? (
+            <div className="status-pill online">
+              <span className="dot online"></span>
+              <span>Model Ready • 3D Topography Active</span>
+            </div>
+          ) : (
+            <div className="status-pill idle">
+              <span className="dot idle"></span>
+              <span>Awaiting Optical Satellite / GeoTIFF Input</span>
+            </div>
+          )}
         </div>
 
         {result && (
@@ -206,21 +257,35 @@ function App() {
       {/* Main Workspace Body */}
       <div className="app-body">
         {/* Left Sidebar: Controls & Analytics */}
-        <aside className="sidebar">
+        <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
           <div className="panel-card controls-card">
-            <h3 className="card-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-              Input Data
-            </h3>
+            <div className="card-header-row">
+              <h3 className="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                Input Data
+              </h3>
+              <span className="source-counter-badge">{file ? '1 Loaded' : '0 Loaded'}</span>
+            </div>
             
             <form onSubmit={handleUpload}>
               <div className="form-group">
                 <label>Source Satellite / Aerial Imagery <span className="req">*</span></label>
-                <div className="file-input-wrapper">
+                <div 
+                  className={`file-input-wrapper ${dragOverSource ? 'drag-over' : ''} ${file ? 'has-file' : ''}`}
+                  onDragOver={(e) => { e.preventDefault(); setDragOverSource(true); }}
+                  onDragLeave={() => setDragOverSource(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverSource(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                      setFile(e.dataTransfer.files[0]);
+                    }
+                  }}
+                >
                   <input 
                     type="file" 
                     id="source-image" 
@@ -239,7 +304,14 @@ function App() {
                         >✕</button>
                       </div>
                     ) : (
-                      <span className="file-placeholder">Choose image or GeoTIFF (.tif, .png, .jpg)</span>
+                      <span className="file-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" style={{marginRight: '6px', verticalAlign: '-2px'}}>
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                          <polyline points="17 8 12 3 7 8"/>
+                          <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        Drop image or GeoTIFF (.tif, .png, .jpg)
+                      </span>
                     )}
                   </div>
                 </div>
@@ -247,7 +319,7 @@ function App() {
 
               <div className="form-group">
                 <label>Reference DSM (Optional Benchmark)</label>
-                <div className="file-input-wrapper">
+                <div className={`file-input-wrapper ${referenceFile ? 'has-file' : ''}`}>
                   <input 
                     type="file" 
                     id="ref-image" 
@@ -283,7 +355,7 @@ function App() {
               <button type="submit" className="submit-btn" disabled={!file || processing}>
                 {processing ? (
                   <span className="btn-content">
-                    <span className="spinner"></span> Processing AI Inference...
+                    <span className="spinner"></span> Processing Pipeline...
                   </span>
                 ) : (
                   <span className="btn-content">
@@ -294,6 +366,28 @@ function App() {
                   </span>
                 )}
               </button>
+
+              {/* Multi-stage interactive pipeline progress */}
+              {processing && (
+                <div className="processing-stepper">
+                  <div className={`step-item ${processingStep >= 1 ? 'active' : ''} ${processingStep > 1 ? 'done' : ''}`}>
+                    <div className="step-circle">{processingStep > 1 ? '✓' : '1'}</div>
+                    <span className="step-text">Ingesting Raster Image</span>
+                  </div>
+                  <div className={`step-item ${processingStep >= 2 ? 'active' : ''} ${processingStep > 2 ? 'done' : ''}`}>
+                    <div className="step-circle">{processingStep > 2 ? '✓' : '2'}</div>
+                    <span className="step-text">Monocular Depth Inference</span>
+                  </div>
+                  <div className={`step-item ${processingStep >= 3 ? 'active' : ''} ${processingStep > 3 ? 'done' : ''}`}>
+                    <div className="step-circle">{processingStep > 3 ? '✓' : '3'}</div>
+                    <span className="step-text">Metric Scale Calibration</span>
+                  </div>
+                  <div className={`step-item ${processingStep >= 4 ? 'active' : ''}`}>
+                    <div className="step-circle">{processingStep >= 4 ? '✓' : '4'}</div>
+                    <span className="step-text">Synthesizing 3D Topography</span>
+                  </div>
+                </div>
+              )}
 
               <div className="sample-loader-row">
                 <button type="button" className="sample-btn" onClick={loadSample}>
@@ -464,47 +558,68 @@ function App() {
                       <button 
                         className={`tool-btn ${viewerMode === 'orbit' ? 'active' : ''}`}
                         onClick={() => setViewerMode('orbit')}
+                        title="Orbit Camera: Click and drag to rotate terrain"
                       >
                         Orbit
                       </button>
                       <button 
                         className={`tool-btn ${viewerMode === 'first_person' ? 'active' : ''}`}
                         onClick={() => setViewerMode('first_person')}
+                        title="WASD Drone Mode: Free-flight controls across 3D terrain"
                       >
-                        First Person (WASD)
+                        Drone (WASD)
                       </button>
                       <button 
                         className={`tool-btn ${viewerMode === 'fly' ? 'active' : ''}`}
                         onClick={() => setViewerMode('fly')}
+                        title="Autonomous 360° Cinematic Orbital Flythrough"
                       >
                         ▶ Flythrough
                       </button>
                       <button 
                         className={`tool-btn ${viewerMode === 'measure_height' ? 'active' : ''}`}
                         onClick={() => setViewerMode('measure_height')}
+                        title="Probe Height: Click 2 points to measure vertical height difference"
                       >
                         Measure Height
                       </button>
                       <button 
                         className={`tool-btn ${viewerMode === 'measure_slope' ? 'active' : ''}`}
                         onClick={() => setViewerMode('measure_slope')}
+                        title="Probe Slope: Click 2 points to calculate surface inclination angle"
                       >
                         Measure Slope
                       </button>
                       <button 
                         className={`tool-btn ${wireframe ? 'active' : ''}`}
                         onClick={() => setWireframe(!wireframe)}
-                        title="Toggle 3D Wireframe Mesh"
+                        title="Toggle 3D Triangular Surface Wireframe Mesh"
                       >
                         📐 Wireframe
                       </button>
                       <button 
                         className="tool-btn"
                         onClick={() => setResetTrigger(prev => prev + 1)}
-                        title="Reset 3D camera to default position"
+                        title="Reset 3D camera to default viewpoint"
                       >
-                        🔄 Reset View
+                        🔄 Reset
                       </button>
+                    </div>
+
+                    <div className="toolbar-divider"></div>
+
+                    {/* Relief Vertical Exaggeration Slider */}
+                    <div className="toolbar-relief-group" title="Topographic Vertical Relief Exaggeration Multiplier">
+                      <span className="relief-label">Relief: <strong>{zExaggeration.toFixed(1)}×</strong></span>
+                      <input 
+                        type="range" 
+                        min="0.2" 
+                        max="3.0" 
+                        step="0.1" 
+                        value={zExaggeration} 
+                        onChange={(e) => setZExaggeration(parseFloat(e.target.value))} 
+                        className="relief-slider"
+                      />
                     </div>
 
                     <div className="toolbar-divider"></div>
@@ -514,7 +629,7 @@ function App() {
                       <select value={textureMode} onChange={(e) => setTextureMode(e.target.value)}>
                         <option value="rgb">Optical RGB</option>
                         <option value="depth">Elevation DSM (Viridis)</option>
-                        <option value="confidence">Confidence Map (Plasma)</option>
+                        <option value="confidence">Confidence Heatmap (Plasma)</option>
                         {result.error_base64 && <option value="error">Error Heatmap (Jet)</option>}
                       </select>
                     </div>
@@ -533,8 +648,25 @@ function App() {
                         rangeElev={result.range_elev}
                         wireframe={wireframe}
                         resetTrigger={resetTrigger}
+                        zExaggeration={zExaggeration}
                       />
                     </Canvas>
+
+                    {/* Floating Topographic Elevation Legend */}
+                    <div className="elevation-legend-widget">
+                      <div className="legend-header">
+                        <span className="legend-title">DSM Topography</span>
+                        <span className="legend-unit">{result.dsm_type === 'metric' ? 'Elevation MSL (m)' : 'Normalized Disparity'}</span>
+                      </div>
+                      <div className="legend-bar-container">
+                        <div className="legend-bar-gradient"></div>
+                        <div className="legend-labels">
+                          <span>{result.min_elev?.toFixed(0)}{result.dsm_type === 'metric' ? 'm' : ''}</span>
+                          <span>{result.mean_elev?.toFixed(0)}{result.dsm_type === 'metric' ? 'm' : ''}</span>
+                          <span>{result.max_elev?.toFixed(0)}{result.dsm_type === 'metric' ? 'm' : ''}</span>
+                        </div>
+                      </div>
+                    </div>
 
                     {(viewerMode === 'measure_height' || viewerMode === 'measure_slope') && (
                       <div className="measurement-hint">
@@ -544,7 +676,7 @@ function App() {
 
                     {viewerMode === 'first_person' && (
                       <div className="measurement-hint">
-                        🕹️ Drag to look, use W/A/S/D to fly through the terrain
+                        🕹️ Drag to look around • Use W / A / S / D keys to fly across the 3D surface
                       </div>
                     )}
                   </div>
@@ -599,44 +731,104 @@ function App() {
             <div className="hero-placeholder">
               <div className="hero-content">
                 <div className="hero-badge">
-                  <span className="dot online"></span> Single-View Satellite Height Estimation
+                  <span className="dot online"></span> ISRO Problem Statement 26175 • End-to-End Pipeline
                 </div>
-                <h2>Interactive 3D Digital Surface Model Pipeline</h2>
-                <p>
-                  Transform monocular 2D optical satellite or aerial imagery into georeferenced, 
-                  calibrated 3D terrains with real-time flythrough and spatial analysis.
+                <h2>Single-View Height Estimation & 3D Flythrough</h2>
+                <p className="hero-subtext">
+                  Transform monocular 2D optical satellite imagery into high-precision, georeferenced 
+                  Digital Surface Models (DSM) with real-time 3D orbital flythrough and spatial measurement.
                 </p>
 
+                {/* Hero Drag and Drop Zone */}
+                <div 
+                  className={`hero-dropzone ${dragOverSource ? 'drag-over' : ''}`}
+                  onDragOver={(e) => { e.preventDefault(); setDragOverSource(true); }}
+                  onDragLeave={() => setDragOverSource(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverSource(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                      setFile(e.dataTransfer.files[0]);
+                    }
+                  }}
+                >
+                  <div className="dropzone-icon-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                  </div>
+                  <div className="dropzone-text-group">
+                    <div className="dropzone-title">
+                      {file ? `Selected: ${file.name}` : 'Drag & Drop Satellite or GeoTIFF Imagery Here'}
+                    </div>
+                    <div className="dropzone-desc">
+                      Accepts standard optical RGB (.png, .jpg), Georeferenced GeoTIFF (.tif), or Scientific HDF5 (.h5)
+                    </div>
+                  </div>
+                  <label className="hero-browse-label">
+                    <span>{file ? 'Change File' : 'Browse Local Files'}</span>
+                    <input 
+                      type="file" 
+                      onChange={(e) => setFile(e.target.files[0])} 
+                      accept="image/*,.tif,.tiff,.h5" 
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                </div>
+
+                {/* Scenario Cards */}
+                <div className="scenario-section">
+                  <div className="scenario-section-header">
+                    <span>Or Explore Interactive Validation Scenarios:</span>
+                  </div>
+                  <div className="scenario-grid">
+                    <div className="scenario-card" onClick={loadSample}>
+                      <div className="scenario-icon-chip rgb">📷</div>
+                      <div className="scenario-info">
+                        <h4>Non-Georeferenced RGB</h4>
+                        <p>Generates Relative Digital Surface Model (rDSM) & confidence heatmap</p>
+                      </div>
+                      <button type="button" className="scenario-btn">Load Scenario ⚡</button>
+                    </div>
+
+                    <div className="scenario-card" onClick={loadGeoTIFFSample}>
+                      <div className="scenario-icon-chip geo">🌐</div>
+                      <div className="scenario-info">
+                        <h4>Georeferenced GeoTIFF</h4>
+                        <p>Produces Absolute Metric DSM with affine spatial projection & export</p>
+                      </div>
+                      <button type="button" className="scenario-btn">Load Scenario ⚡</button>
+                    </div>
+
+                    <div className="scenario-card" onClick={loadBenchmarkSample}>
+                      <div className="scenario-icon-chip benchmark">🎯</div>
+                      <div className="scenario-info">
+                        <h4>Calibrated Benchmark (GAMUS)</h4>
+                        <p>Evaluates MAE, RMSE & Pearson correlation against ground truth DEM</p>
+                      </div>
+                      <button type="button" className="scenario-btn">Load Scenario ⚡</button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pipeline Feature Architecture */}
                 <div className="feature-grid">
                   <div className="feature-card">
                     <div className="feature-icon">🛰️</div>
-                    <h4>Single-View Depth</h4>
-                    <p>Foundation AI model estimates high-resolution relative depth and relief.</p>
+                    <h4>Monocular Depth Backbone</h4>
+                    <p>Extracts scale-agnostic geometric relief using foundation vision backbones.</p>
                   </div>
                   <div className="feature-card">
                     <div className="feature-icon">📏</div>
-                    <h4>Metric DSM Calibration</h4>
-                    <p>Converts relative disparity into absolute physical elevation in meters.</p>
+                    <h4>Metric Height Calibration</h4>
+                    <p>Calculates absolute meters above sea level via regression & scene priors.</p>
                   </div>
                   <div className="feature-card">
                     <div className="feature-icon">🎮</div>
-                    <h4>3D Flythrough & Probing</h4>
-                    <p>Interactive 60fps orbit, drone flythrough, height and slope measurement.</p>
-                  </div>
-                </div>
-
-                <div className="upload-prompt-badge">
-                  <span>Quick Start Demo Scenarios:</span>
-                  <div className="hero-btn-group">
-                    <button type="button" className="hero-sample-btn" onClick={loadSample} title="Load standard optical image for Relative DSM">
-                      ⚡ Optical RGB (rDSM)
-                    </button>
-                    <button type="button" className="hero-sample-btn geotiff" onClick={loadGeoTIFFSample} title="Load georeferenced GeoTIFF for Absolute Metric DSM">
-                      🌐 GeoTIFF (Georeferenced)
-                    </button>
-                    <button type="button" className="hero-sample-btn benchmark" onClick={loadBenchmarkSample} title="Load GAMUS Washington D.C. urban dataset with ground-truth DEM">
-                      🎯 Calibrated Benchmark Pair
-                    </button>
+                    <h4>3D Flythrough & Spatial Probing</h4>
+                    <p>Real-time 60fps drone navigation, slope estimation, and height difference vector probing.</p>
                   </div>
                 </div>
               </div>

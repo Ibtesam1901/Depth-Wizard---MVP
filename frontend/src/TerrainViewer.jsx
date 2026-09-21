@@ -12,7 +12,8 @@ export default function TerrainViewer({
   dsmType = 'relative',
   rangeElev = null,
   wireframe = false,
-  resetTrigger = 0
+  resetTrigger = 0,
+  zExaggeration = 1.0
 }) {
   const meshRef = useRef()
   const geometryRef = useRef()
@@ -43,13 +44,13 @@ export default function TerrainViewer({
     for (let i = 0; i < positions.length / 3; i++) {
       const h = heightData[i] || 0
       // Scale height relative to the terrain width for an aesthetically balanced relief
-      const zScale = 0.22 * width 
+      const zScale = 0.22 * width * (zExaggeration || 1.0)
       positions[i * 3 + 2] = ((h - minH) / range) * zScale
     }
     
     geometryRef.current.computeVertexNormals()
     geometryRef.current.attributes.position.needsUpdate = true
-  }, [heightData, width, height])
+  }, [heightData, width, height, zExaggeration])
 
   // 3. Reset Camera Trigger
   useEffect(() => {
@@ -100,7 +101,7 @@ export default function TerrainViewer({
       const dZ = p2.z - p1.z
       const dist2D = Math.sqrt(dX * dX + dZ * dZ)
       
-      const zScale = 0.22 * width
+      const zScale = 0.22 * width * (zExaggeration || 1.0)
       const actualRange = (rangeElev !== null && rangeElev !== undefined && rangeElev > 0) 
         ? rangeElev 
         : (Math.max(...heightData) - Math.min(...heightData) || 1.0)
