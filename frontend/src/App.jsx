@@ -61,6 +61,22 @@ function App() {
     }
   }
 
+  const loadBenchmarkSample = async () => {
+    try {
+      const resRgb = await fetch('/demo_rgb.h5')
+      const blobRgb = await resRgb.blob()
+      const sampleRgb = new File([blobRgb], 'DC_10_20_RGB.h5', { type: 'application/x-hdf' })
+      setFile(sampleRgb)
+
+      const resRef = await fetch('/demo_ref.h5')
+      const blobRef = await resRef.blob()
+      const sampleRef = new File([blobRef], 'DC_10_20_AGL.h5', { type: 'application/x-hdf' })
+      setReferenceFile(sampleRef)
+    } catch (err) {
+      console.error('Failed to load benchmark sample:', err)
+    }
+  }
+
   return (
     <div className="app-shell">
       {/* Top Navigation Bar */}
@@ -172,13 +188,13 @@ function App() {
                     type="file" 
                     id="ref-image" 
                     onChange={(e) => setReferenceFile(e.target.files[0])} 
-                    accept=".tif,.tiff" 
+                    accept=".tif,.tiff,.h5" 
                   />
                   <div className="file-display">
                     {referenceFile ? (
                       <span className="file-name" title={referenceFile.name}>📊 {referenceFile.name}</span>
                     ) : (
-                      <span className="file-placeholder">Ground truth GeoTIFF for validation</span>
+                      <span className="file-placeholder">Ground truth DSM (.tif, .h5) for validation</span>
                     )}
                   </div>
                 </div>
@@ -209,7 +225,10 @@ function App() {
 
               <div className="sample-loader-row">
                 <button type="button" className="sample-btn" onClick={loadSample}>
-                  ⚡ Load Demo Satellite Scene
+                  ⚡ Load Demo Scene
+                </button>
+                <button type="button" className="sample-btn benchmark-btn" onClick={loadBenchmarkSample}>
+                  🎯 Load Benchmark Pair (Calibrated)
                 </button>
               </div>
             </form>

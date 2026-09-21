@@ -354,6 +354,8 @@
 .sample-loader-row {
   margin-top: 0.65rem;
   display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
 }
 
 .sample-btn {
@@ -373,6 +375,17 @@
 .sample-btn:hover {
   background: rgba(139, 92, 246, 0.15);
   border-color: #8b5cf6;
+  color: #ffffff;
+}
+
+.sample-btn.benchmark-btn {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+
+.sample-btn.benchmark-btn:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
   color: #ffffff;
 }
 
