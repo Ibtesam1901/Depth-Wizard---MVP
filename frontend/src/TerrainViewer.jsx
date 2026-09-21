@@ -8,7 +8,9 @@ export default function TerrainViewer({
   width, 
   height, 
   textureBase64,
-  mode = 'orbit' // 'orbit', 'first_person', 'fly', 'measure_height', 'measure_slope'
+  mode = 'orbit', // 'orbit', 'first_person', 'fly', 'measure_height', 'measure_slope'
+  dsmType = 'relative',
+  rangeElev = null
 }) {
   const meshRef = useRef()
   const geometryRef = useRef()
@@ -83,10 +85,14 @@ export default function TerrainViewer({
       const dist2D = Math.sqrt(dX*dX + dZ*dZ) // XZ is the ground plane
       
       if (mode === 'measure_height') {
-        setMeasurement(`Height Diff: ${Math.abs(dY).toFixed(2)} units`)
+        const zScale = 0.2 * width
+        const actualRange = rangeElev !== null && rangeElev !== undefined ? rangeElev : (Math.max(...heightData) - Math.min(...heightData) || 1.0)
+        const realHeightDiff = (Math.abs(dY) / zScale) * actualRange
+        const unit = dsmType === 'metric' ? 'm' : 'units'
+        setMeasurement(`Height Diff: ${realHeightDiff.toFixed(2)} ${unit}`)
       } else {
         const slope = Math.atan2(Math.abs(dY), dist2D) * (180 / Math.PI)
-        setMeasurement(`Slope: ${slope.toFixed(2)}°`)
+        setMeasurement(`Slope: ${slope.toFixed(1)}°`)
       }
       setPoints([p1, p2])
       

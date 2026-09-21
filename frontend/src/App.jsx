@@ -56,8 +56,21 @@ function App() {
       const blob = await res.blob()
       const sampleFile = new File([blob], 'satellite_sample.jpg', { type: 'image/jpeg' })
       setFile(sampleFile)
+      setReferenceFile(null)
     } catch (err) {
       console.error('Failed to load sample:', err)
+    }
+  }
+
+  const loadGeoTIFFSample = async () => {
+    try {
+      const res = await fetch('/demo_geotiff.tif')
+      const blob = await res.blob()
+      const sampleFile = new File([blob], 'test_geo.tif', { type: 'image/tiff' })
+      setFile(sampleFile)
+      setReferenceFile(null)
+    } catch (err) {
+      console.error('Failed to load GeoTIFF sample:', err)
     }
   }
 
@@ -77,6 +90,31 @@ function App() {
     }
   }
 
+  const downloadGeoTIFF = () => {
+    if (!result?.geotiff_base64) return
+    const byteCharacters = atob(result.geotiff_base64)
+    const byteNumbers = new Array(byteCharacters.length)
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i)
+    }
+    const byteArray = new Uint8Array(byteNumbers)
+    const blob = new Blob([byteArray], { type: 'image/tiff' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = result.export_filename || 'dsm_export.tif'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const getActiveTexture = () => {
+    if (!result) return null
+    if (textureMode === 'depth') return result.depth_base64
+    if (textureMode === 'confidence') return result.confidence_base64
+    if (textureMode === 'error') return result.error_base64 || result.depth_base64
+    return result.rgb_base64
+  }
+
   return (
     <div className="app-shell">
       {/* Top Navigation Bar */}
@@ -91,25 +129,40 @@ function App() {
           </div>
           <div className="brand-title">
             <h1>DepthWizard</h1>
-            <span className="brand-badge">SIH 2026 • AI Satellite DSM</span>
+            <span className="brand-badge">ISRO 26175 • AI Satellite DSM</span>
           </div>
         </div>
 
         {result && (
           <div className="nav-chips">
             <span className="chip"><span className="dot online"></span> {result.width} × {result.height} px</span>
-            <span className="chip">{result.is_geotiff ? '🌐 GeoTIFF' : result.is_h5 ? '📦 HDF5' : '📷 RGB Image'}</span>
-            <span className="chip highlight">Elev: {result.min_elev?.toFixed(0)}m – {result.max_elev?.toFixed(0)}m</span>
+            <span className="chip">{result.is_geotiff ? '🌐 GeoTIFF' : result.is_h5 ? '📦 HDF5' : '📷 Optical RGB'}</span>
+            <span className="chip highlight">
+              {result.dsm_type === 'metric' ? `Elev: ${result.min_elev?.toFixed(0)}m – ${result.max_elev?.toFixed(0)}m` : `Relief: ${result.range_elev?.toFixed(2)} (rDSM)`}
+            </span>
           </div>
         )}
 
         {result && (
-          <div className="layout-switcher">
+          <div className="nav-actions-group">
             <button 
-              className={`switcher-btn ${layoutMode === 'split' ? 'active' : ''}`}
-              onClick={() => setLayoutMode('split')}
-              title="Dual View: 2D Maps and 3D Terrain side-by-side"
+              className="export-btn-top" 
+              onClick={downloadGeoTIFF}
+              title="Download Standard Geospatial GeoTIFF Raster (.tif)"
             >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export GeoTIFF
+            </button>
+            <div className="layout-switcher">
+              <button 
+                className={`switcher-btn ${layoutMode === 'split' ? 'active' : ''}`}
+                onClick={() => setLayoutMode('split')}
+                title="Dual View: 2D Maps and 3D Terrain side-by-side"
+              >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="3" width="8" height="18" rx="2" />
                 <rect x="13" y="3" width="8" height="18" rx="2" />
@@ -144,8 +197,9 @@ function App() {
               2D Maps
             </button>
           </div>
-        )}
-      </header>
+        </div>
+      )}
+    </header>
 
       {/* Main Workspace Body */}
       <div className="app-body">
@@ -225,7 +279,10 @@ function App() {
 
               <div className="sample-loader-row">
                 <button type="button" className="sample-btn" onClick={loadSample}>
-                  ⚡ Load Demo Scene
+                  ⚡ Load Optical RGB (rDSM)
+                </button>
+                <button type="button" className="sample-btn geotiff-btn" onClick={loadGeoTIFFSample}>
+                  🌐 Load GeoTIFF (Georeferenced)
                 </button>
                 <button type="button" className="sample-btn benchmark-btn" onClick={loadBenchmarkSample}>
                   🎯 Load Benchmark Pair (Calibrated)
@@ -290,14 +347,39 @@ function App() {
                   <strong>{result.width} × {result.height} px</strong>
                 </div>
                 <div className="meta-row">
-                  <span>Input Format:</span>
-                  <strong>{result.is_h5 ? 'HDF5' : result.is_geotiff ? 'GeoTIFF' : 'RGB Image'}</strong>
+                  <span>Input Ingestion:</span>
+                  <strong>{result.is_h5 ? 'HDF5 Scientific' : result.is_geotiff ? 'GeoTIFF (Geospatial)' : 'Optical RGB (PNG/JPG)'}</strong>
                 </div>
                 <div className="meta-row">
-                  <span>Georeferenced:</span>
-                  <strong className={result.is_geotiff ? 'text-accent' : ''}>
-                    {result.is_geotiff ? '✅ Calibrated CRS' : 'ℹ️ Relative'}
+                  <span>DSM Model:</span>
+                  <strong className={result.dsm_type === 'metric' ? 'text-accent' : ''}>
+                    {result.dsm_type === 'metric' ? 'Absolute Metric DSM' : 'Relative DSM (rDSM)'}
                   </strong>
+                </div>
+                <div className="meta-row">
+                  <span>Spatial Reference:</span>
+                  <strong>{result.crs || 'Local Pixel Grid'}</strong>
+                </div>
+                <div className="meta-row">
+                  <span>Calibration:</span>
+                  <strong>
+                    {result.calibration_method === 'ground_truth_regression' 
+                      ? 'Ground Truth Regression' 
+                      : result.calibration_method === 'scene_prior' 
+                      ? 'Scene Prior Metric Scaling' 
+                      : 'None (Visual Relief)'}
+                  </strong>
+                </div>
+
+                <div className="export-action-box">
+                  <button 
+                    type="button" 
+                    className="export-dsm-btn" 
+                    onClick={downloadGeoTIFF}
+                    title="Export the final high-fidelity DSM as a standard GeoTIFF"
+                  >
+                    💾 Export GeoTIFF DSM (.tif)
+                  </button>
                 </div>
               </div>
             </div>
@@ -398,8 +480,10 @@ function App() {
                     <div className="toolbar-texture">
                       <label>Texture:</label>
                       <select value={textureMode} onChange={(e) => setTextureMode(e.target.value)}>
-                        <option value="rgb">RGB Satellite</option>
-                        <option value="confidence">Confidence Map</option>
+                        <option value="rgb">Optical RGB</option>
+                        <option value="depth">Elevation DSM (Viridis)</option>
+                        <option value="confidence">Confidence Map (Plasma)</option>
+                        {result.error_base64 && <option value="error">Error Heatmap (Jet)</option>}
                       </select>
                     </div>
                   </div>
@@ -411,8 +495,10 @@ function App() {
                         heightData={result.dsm_data} 
                         width={result.width} 
                         height={result.height} 
-                        textureBase64={textureMode === 'rgb' ? result.rgb_base64 : result.confidence_base64}
+                        textureBase64={getActiveTexture()}
                         mode={viewerMode}
+                        dsmType={result.dsm_type}
+                        rangeElev={result.range_elev}
                       />
                     </Canvas>
 
@@ -435,29 +521,41 @@ function App() {
                       <div 
                         className={`dock-item ${textureMode === 'rgb' ? 'active' : ''}`}
                         onClick={() => setTextureMode('rgb')}
-                        title="Texture: RGB Satellite (Click to apply / Double-click to expand)"
+                        title="Texture: Optical RGB (Click to apply / Double-click to expand)"
                         onDoubleClick={() => openLightbox('Original Satellite Image', result.rgb_base64)}
                       >
                         <img src={`data:image/png;base64,${result.rgb_base64}`} alt="RGB" />
                         <span>RGB</span>
                       </div>
                       <div 
-                        className="dock-item"
-                        onClick={() => openLightbox('Estimated Depth / DSM', result.depth_base64)}
-                        title="Depth Map (Click to inspect)"
+                        className={`dock-item ${textureMode === 'depth' ? 'active' : ''}`}
+                        onClick={() => setTextureMode('depth')}
+                        title="Texture: Elevation DSM (Click to apply / Double-click to expand)"
+                        onDoubleClick={() => openLightbox('Estimated Depth / DSM', result.depth_base64)}
                       >
                         <img src={`data:image/png;base64,${result.depth_base64}`} alt="Depth" />
-                        <span>Depth</span>
+                        <span>DSM</span>
                       </div>
                       <div 
                         className={`dock-item ${textureMode === 'confidence' ? 'active' : ''}`}
                         onClick={() => setTextureMode('confidence')}
-                        title="Texture: Confidence Heatmap (Click to apply)"
+                        title="Texture: Confidence Heatmap (Click to apply / Double-click to expand)"
                         onDoubleClick={() => openLightbox('Confidence Map', result.confidence_base64)}
                       >
                         <img src={`data:image/png;base64,${result.confidence_base64}`} alt="Confidence" />
                         <span>Confidence</span>
                       </div>
+                      {result.error_base64 && (
+                        <div 
+                          className={`dock-item ${textureMode === 'error' ? 'active' : ''}`}
+                          onClick={() => setTextureMode('error')}
+                          title="Texture: Error Heatmap (Click to apply / Double-click to expand)"
+                          onDoubleClick={() => openLightbox('Error Heatmap', result.error_base64)}
+                        >
+                          <img src={`data:image/png;base64,${result.error_base64}`} alt="Error" />
+                          <span>Error</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
