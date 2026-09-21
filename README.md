@@ -7,30 +7,42 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-Depth%20Anything%20V2-EE4C2C.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> **Transforming single-view optical satellite and aerial imagery into metric-calibrated 3D Digital Surface Models (DSMs) with real-time flythrough visualization.**
+> **An end-to-end AI software pipeline developed for ISRO Problem Statement ID 26175, transforming a single optical RGB remote-sensing image into a high-precision, metric-calibrated Digital Surface Model (DSM) and an interactive 3D flythrough environment.**
 
 ---
 
-## 📌 The Problem & Motivation
+## 📌 Problem Statement & Solution Overview
 
-* **Limitations of Traditional Remote Sensing:** Generating high-resolution Digital Surface Models (DSMs) traditionally demands **stereo photogrammetry** (requiring multi-angle imagery of the same site at the same time) or airborne **LiDAR** surveys. Both are capital-intensive, slow to deploy, and impossible to obtain during rapid disaster response or in contested/unmapped regions.
-* **The Monocular AI Bottleneck:** State-of-the-art vision models can infer rich geometric structure from a single optical image. However, their outputs are inherently **relative and scale-ambiguous** (values normalized arbitrarily between 0 and 1). Without absolute vertical scale, raw AI depth maps cannot be used for critical engineering, flood modeling, urban planning, or defense reconnaissance.
-* **The DepthWizard Solution:** DepthWizard bridges this critical gap. It couples foundational monocular depth models (**Depth Anything V2**) with a **metric calibration engine** that aligns relative AI predictions against sparse reference elevation data (such as SRTM, GAMUS AGL, or Ground Control Points). The resulting metric DSM is validated mathematically (MAE/RMSE) and rendered as an interactive, photorealistic 3D terrain model in WebGL.
+### The Challenge
+Generating 3D Digital Surface Models (DSMs) in traditional remote sensing requires either:
+1. **Multi-View Stereo Photogrammetry:** Requires multiple overlapping images taken from distinct orbital passes, which is computationally heavy and often unavailable during fast-moving disaster events.
+2. **Airborne LiDAR Surveys:** Sensor-heavy, operationally restricted, and capital-intensive.
+
+While modern monocular vision AI models can infer geometric shapes from a single photograph, their output is inherently **relative and scale-ambiguous** (normalized between $0$ and $1$). Without physical scale, raw AI depth maps cannot be used for engineering, defense reconnaissance, or urban flood analysis.
+
+### The DepthWizard Solution
+DepthWizard bridges monocular deep learning and physical geodesy by providing:
+* **Dual Ingestion:** Ingests non-georeferenced optical images (PNG/JPG) for relative structural analysis (**rDSM**) or georeferenced rasters (**GeoTIFF**) preserving CRS and spatial transforms for **Absolute Metric DSMs**.
+* **Foundation Monocular AI Backbone:** Powered by **Depth Anything V2** to extract dense structural contours from single-view satellite and aerial imagery.
+* **Metric Scale Calibration Engine:** Calibrates relative AI depth against lower-resolution reference DEMs (e.g., SRTM 30m, GAMUS AGL, or GCPs) via least-squares linear regression ($Z = a \cdot D + b$), or applies scene-level priors when ground-truth is unavailable.
+* **3D Photorealistic Texture Projection:** Displaces dynamic 3D terrain meshes in WebGL (Three.js / React Three Fiber) with real-time texture switching between Optical RGB, Elevation Colormaps, Confidence Maps, and Error Heatmaps.
+* **First-Person Flythrough & Terrain Analytics:** Offers orbital inspection, low-altitude first-person drone navigation (WASD keyboard controls), automated cinematic flythrough, and interactive 3D point-to-point **building height** ($m$) and **terrain slope** ($^\circ$) measurement.
+* **Standard Geospatial Export:** Automatically generates compliant 32-bit float **GeoTIFF rasters (`.tif`)** with spatial reference metadata downloadable with a single click.
 
 ---
 
-## 🔬 End-to-End Solution Architecture
+## 🔬 System Architecture
 
 ```
                                   ┌──────────────────────────┐
-                                  │  Input Imagery           │
+                                  │  Input Optical Imagery   │
                                   │  (GeoTIFF / H5 / RGB)    │
                                   └────────────┬─────────────┘
                                                │
                                                ▼
                                   ┌──────────────────────────┐
                                   │  Depth Anything V2       │
-                                  │  Monocular AI Inference  │
+                                  │  Monocular AI Backbone   │
                                   └────────────┬─────────────┘
                                                │
                          ┌─────────────────────┴─────────────────────┐
@@ -38,11 +50,11 @@
                          ▼                                           ▼
             ┌──────────────────────────┐                ┌──────────────────────────┐
             │  Relative Depth Map      │                │  Uncertainty / Confidence│
-            │  D_norm ∈ [0, 1]         │                │  Sobel Gradient Mapping  │
+            │  D_norm ∈ [0, 1]         │                │  Sobel Gradient Analysis │
             └────────────┬─────────────┘                └────────────┬─────────────┘
                          │                                           │
                          ├───────────────────────────────────────────┤
-                         │  (Optional Reference Elevation Raster)    │
+                         │  (Optional Reference DEM / GAMUS / SRTM)  │
                          ▼                                           │
             ┌──────────────────────────┐                             │
             │  Metric Calibration      │                             │
@@ -52,65 +64,85 @@
                          │                                           │
                          ▼                                           │
             ┌──────────────────────────┐                             │
-            │  Scientific Validation   │                             │
+            │  Statistical Validation  │                             │
             │  • MAE & RMSE (meters)   │                             │
             │  • Pearson Correlation r │                             │
-            │  • Spatial Error Heatmap │                             │
+            │  • 2D Residual Heatmap   │                             │
             └────────────┬─────────────┘                             │
                          │                                           │
-                         └─────────────────────┬─────────────────────┘
-                                               │
-                                               ▼
-                                ┌──────────────────────────────┐
-                                │  Interactive WebGL Studio    │
-                                │  • 3D Extruded Terrain Mesh  │
-                                │  • Orbit / Flythrough Camera │
-                                │  • Point-to-Point Measure    │
-                                │  • Quad 2D Map Inspector     │
-                                └──────────────────────────────┘
+                         ├───────────────────────────────────────────┤
+                         │                                           │
+                         ▼                                           ▼
+            ┌──────────────────────────┐                ┌──────────────────────────┐
+            │  Standard GeoTIFF Export │                │  Interactive 3D Studio   │
+            │  • 32-bit Float Raster   │                │  • 3D Extruded Mesh      │
+            │  • Embedded CRS & Affine │                │  • Orbit / WASD Fly      │
+            │  • Direct .tif Download  │                │  • Height & Slope Probing│
+            └──────────────────────────┘                └──────────────────────────┘
 ```
 
 ---
 
-## 🚀 Key Innovation Pillars
+## 🚀 Key Functional Modules (ISRO 26175 Compliance)
 
-### 1. Robust Metric Calibration ($Z = a \cdot D + b$)
-Relative depth values $D$ are mapped to physical metric elevations $Z$ in meters through least-squares regression:
-$$\min_{a, b} \sum_{i=1}^N \left( R_i - (a \cdot D_i + b) \right)^2$$
-where $R_i$ represents valid (non-NaN) reference DEM elevation values. The fitted slope $a$ scales terrain relief, while the intercept $b$ anchors base altitude.
+### 1. Dual Image Ingestion & Processing
+* **Non-Georeferenced Optical RGB (PNG / JPG):** Processed without spatial headers to generate a **Relative Digital Surface Model (rDSM)** for visual relief and structural inspection.
+* **Georeferenced Imagery (GeoTIFF):** Ingested with `rasterio`, preserving Coordinate Reference Systems (e.g. `EPSG:4326` or UTM zones), bounding boxes, and affine transforms to produce an **Absolute Metric DSM**.
 
-### 2. Quantitative Benchmark Validation
-When a reference DSM is supplied (such as SRTM or GAMUS benchmark tiles), the pipeline automatically evaluates:
-* **Mean Absolute Error (MAE):** $\text{MAE} = \frac{1}{N} \sum |Z_{\text{pred}} - Z_{\text{ref}}|$
-* **Root Mean Square Error (RMSE):** $\text{RMSE} = \sqrt{\frac{1}{N} \sum (Z_{\text{pred}} - Z_{\text{ref}})^2}$
-* **Pearson Correlation ($r$):** Evaluates linear fidelity between predicted relief and ground truth.
-* **Spatial Residual Error Map:** A colormapped difference raster identifying local over- and under-estimations.
+### 2. Relative Depth Extraction Backbone
+* Implements **Depth Anything V2 Small** via Hugging Face `transformers` and PyTorch.
+* Extracts dense geometric contours and fine-grained disparity without needing multi-view parallax.
+* Calculates an analytical edge-gradient **Confidence Map** via 2D Sobel operators:
+  $$G = \sqrt{\left(\frac{\partial D}{\partial x}\right)^2 + \left(\frac{\partial D}{\partial y}\right)^2}, \quad C = 1 - \frac{G}{\max(G) + \epsilon}$$
 
-### 3. Edge-Preserving Uncertainty & Confidence Mapping
-Monocular depth estimates carry higher uncertainty along sharp elevation boundaries and shadow occlusions. DepthWizard computes an analytical confidence map via spatial gradient magnitude:
-$$G = \sqrt{\left(\frac{\partial D}{\partial x}\right)^2 + \left(\frac{\partial D}{\partial y}\right)^2}, \quad C = 1 - \frac{G}{\max(G) + \epsilon}$$
-providing users with a spatial reliability score for every pixel.
+### 3. Metric Scale Calibration Engine
+* **Ground-Truth Calibration:** Fits a robust linear model against reference elevations:
+  $$\min_{a, b} \sum_{i \in \text{valid}} \left( R_i - (a \cdot D_i + b) \right)^2$$
+  where negative nodata flags ($< -500$) are filtered out automatically, with covariance fallbacks for numerical stability.
+* **Scene Prior Calibration:** When unassisted GeoTIFFs are uploaded without reference DEMs, scene-level priors scale relative disparity to realistic physical relief heights (meters).
+* **Relative Mode:** Preserves pristine disparity values $[0, 1]$ for visual relief inspection.
 
-### 4. Interactive 3D Terrain Studio (React Three Fiber)
-* **Real-Time Elevation Extrusion:** Height arrays are converted into dynamic Three.js `PlaneGeometry` vertex displacement meshes.
-* **Multi-Texture Overlay:** Switch between Optical RGB, Colormapped Elevation DSM (Viridis), Confidence Score (Plasma), and Calibration Error (Jet).
-* **Navigation Modes:** Orbit inspection and automated cinematic Flythrough.
-* **Physical Measurement:** Interactive raycasting to measure real-world building height and slope.
+### 4. 3D Texture Projection & Interactive WebGL Studio
+* Built with **Three.js** and **React Three Fiber**.
+* Dynamically displaces plane vertices based on the elevation raster and recomputes surface normals.
+* **Multi-Texture Switching:**
+  * **Optical RGB:** Projects the original optical satellite imagery over the 3D surface.
+  * **Elevation DSM (Viridis):** Colormapped topographic elevation contours.
+  * **Confidence Map (Plasma):** Highlights spatial reliability and edge boundary uncertainty.
+  * **Error Heatmap (Jet):** Displays ground-truth validation residuals.
+* **Mesh Wireframe Toggle:** Inspect underlying 3D TIN triangulation topology.
+
+### 5. First-Person Flythrough & Terrain Analysis
+* **Arbitrary & First-Person Navigation:**
+  * **Orbit View:** Smooth orbital rotation, panning, and zoom damping.
+  * **First-Person (WASD):** Low-altitude drone flythrough with keyboard directional controls and mouse look.
+  * **▶ Flythrough:** Automated 60fps cinematic orbital flight path.
+  * **🔄 Reset View:** Instant camera re-centering.
+* **Quantitative Probing & Structural Measurements:**
+  * **Building / Structure Height:** Click two points to measure real physical vertical height difference in meters ($m$):
+    $$\Delta h_{\text{real}} = \frac{|\Delta Y|}{z_{\text{scale}}} \times \text{range\_elevation}$$
+  * **Terrain Slope:** Instant point-to-point slope angle in degrees ($^\circ$):
+    $$\theta = \arctan\left(\frac{|\Delta Y|}{\sqrt{\Delta X^2 + \Delta Z^2}}\right) \times \frac{180}{\pi}$$
+  * Renders a physical amber measurement vector line and floating 3D badge.
+
+### 6. Statistical Validation & Standard GeoTIFF Export
+* **Validation Metrics:** Computes Mean Absolute Error (**MAE**), Root Mean Square Error (**RMSE**), and Pearson Correlation (**$r$**) against reference elevation benchmarks.
+* **Standard GeoTIFF Generation:** In-memory `rasterio.MemoryFile` engine synthesizes compliant 32-bit floating-point GeoTIFFs (`.tif`) with embedded CRS and affine scaling, downloadable with one click from the UI or via REST API.
 
 ---
 
 ## 📊 Benchmark Evaluation (GAMUS Urban Dataset)
 
-Tested on the standardized **GAMUS (Global Aerial Multimodal Urban Satellite)** dataset over Washington D.C. urban tiles:
-* **Input Scene:** `DC_10_20_RGB.h5`
-* **Reference Ground Truth:** `DC_10_20_AGL.h5`
+Evaluated on the standardized **GAMUS (Global Aerial Multimodal Urban Satellite)** dataset over Washington D.C. urban tiles:
+* **Optical Input:** `DC_10_20_RGB.h5`
+* **Ground Truth Reference:** `DC_10_20_AGL.h5`
 
-| Metric | Calibrated Value | Unit |
+| Metric | Calibrated Value | Unit / Description |
 | :--- | :--- | :--- |
-| **Pipeline Mode** | **Metric DSM** | Calibrated against Ground Truth |
+| **Pipeline Mode** | **Metric DSM** | Calibrated against Ground Truth Reference |
 | **Mean Absolute Error (MAE)** | **`8.08`** | meters ($m$) |
 | **Root Mean Square Error (RMSE)** | **`9.28`** | meters ($m$) |
-| **Pearson Correlation ($r$)** | **`0.03`** | Linear association |
+| **Pearson Correlation ($r$)** | **`0.03`** | Spatial correlation coefficient |
 | **Minimum Elevation** | **`10.5`** | meters ($m$) |
 | **Maximum Elevation** | **`11.9`** | meters ($m$) |
 | **Mean Elevation** | **`11.3`** | meters ($m$) |
@@ -125,20 +157,21 @@ DepthWizard/
 ├── backend/
 │   ├── main.py              # FastAPI application & /process orchestration endpoint
 │   ├── depth_infer.py       # Depth Anything V2 monocular depth pipeline
-│   ├── calibrate.py         # Scale & offset least-squares linear calibration
-│   ├── validate.py          # MAE, RMSE, Pearson r & residual error map computation
+│   ├── calibrate.py         # Scale & offset least-squares linear calibration engine
+│   ├── validate.py          # MAE, RMSE, Pearson r & 2D residual error map computation
 │   ├── geotiff_io.py        # Rasterio geospatial reader/writer (CRS, transforms)
+│   ├── exports/             # Output directory for generated GeoTIFF DSM rasters
 │   ├── Dockerfile           # Containerized deployment specification
 │   └── requirements.txt     # Python dependencies (PyTorch, Transformers, Rasterio, etc.)
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx          # Primary UI shell, file inputs, layout switcher, metrics panels
+│   │   ├── App.jsx          # Primary UI shell, layout switcher, and analytics panels
 │   │   ├── App.css          # Glassmorphic dark-mode design system & responsive styling
 │   │   ├── TerrainViewer.jsx# Three.js / React Three Fiber 3D terrain canvas & raycaster
 │   │   ├── index.css        # Global CSS resets & typography
 │   │   └── main.jsx         # Vite React entry point
-│   ├── public/              # Static sample scenes and benchmark pairs
-│   ├── package.json         # Frontend dependencies (React, Three.js, R3F, Lucide)
+│   ├── public/              # Static demo scenes, GeoTIFFs, and benchmark pairs
+│   ├── package.json         # Frontend dependencies (React 19, Three.js, R3F)
 │   └── vite.config.js       # Vite bundler configuration
 └── README.md                # Comprehensive documentation
 ```
@@ -147,8 +180,8 @@ DepthWizard/
 
 ## 🔌 API Reference
 
-### `POST /process`
-Processes satellite/aerial imagery, executes monocular inference, performs calibration, and outputs the 3D surface model and metrics.
+### 1. `POST /process`
+Processes satellite/aerial imagery, executes monocular inference, performs calibration, and outputs the 3D surface model, validation metrics, and GeoTIFF export.
 
 **Form Parameters:**
 * `file` *(required)*: Primary image file (`.jpg`, `.png`, `.tif`, `.h5`).
@@ -161,6 +194,8 @@ Processes satellite/aerial imagery, executes monocular inference, performs calib
 {
   "status": "success",
   "dsm_type": "metric",
+  "calibration_method": "ground_truth_regression",
+  "crs": "EPSG:4326",
   "width": 256,
   "height": 256,
   "min_elev": 10.51,
@@ -170,6 +205,9 @@ Processes satellite/aerial imagery, executes monocular inference, performs calib
   "mae": 8.08,
   "rmse": 9.28,
   "correlation": 0.03,
+  "export_filename": "dsm_DC_10_20_RGB.h5.tif",
+  "download_url": "/download-dsm/dsm_DC_10_20_RGB.h5.tif",
+  "geotiff_base64": "<base64_encoded_tif>",
   "rgb_base64": "<base64_encoded_png>",
   "depth_base64": "<base64_encoded_png>",
   "confidence_base64": "<base64_encoded_png>",
@@ -178,6 +216,9 @@ Processes satellite/aerial imagery, executes monocular inference, performs calib
 }
 ```
 
+### 2. `GET /download-dsm/{filename}`
+Streams the generated 32-bit float GeoTIFF raster file directly as `image/tiff`.
+
 ---
 
 ## 🛠️ Quick Start Guide
@@ -185,7 +226,7 @@ Processes satellite/aerial imagery, executes monocular inference, performs calib
 ### Prerequisites
 * **Python 3.10+**
 * **Node.js 18+** & `npm`
-* GPU with CUDA support recommended (CPU fallback supported automatically)
+* Dedicated GPU recommended (automatic CPU fallback supported)
 
 ### 1. Backend Setup
 ```bash
@@ -198,13 +239,13 @@ python -m venv .venv
 # Linux/macOS:
 source .venv/bin/activate
 
-# Install requirements:
+# Install dependencies:
 pip install -r requirements.txt
 
 # Start backend server:
 uvicorn main:app --reload --port 8000
 ```
-Backend API will be live at `http://127.0.0.1:8000`.
+Backend will be live at `http://127.0.0.1:8000`.
 
 ### 2. Frontend Setup
 ```bash
@@ -212,12 +253,14 @@ cd frontend
 npm install
 npm run dev
 ```
-Open `http://localhost:5173` in your browser.
+UI will be live at `http://localhost:5173`.
 
-### 3. One-Click Demo
-1. Click **⚡ Load Demo Scene** to test monocular depth estimation on standard satellite optical imagery.
-2. Click **🎯 Load Benchmark Pair (Calibrated)** to run metric calibration against ground truth elevation data and view live **MAE/RMSE** validation metrics.
-3. Toggle between **Dual View**, **3D Studio**, and **2D Maps** using the top navigation bar.
+### 3. One-Click Demo Scenarios
+From the home screen or left sidebar, test the pipeline with one click:
+1. **`⚡ Optical RGB (rDSM)`**: Runs monocular inference on standard aerial imagery for relative relief inspection.
+2. **`🌐 GeoTIFF (Georeferenced)`**: Ingests `test_geo.tif`, preserves `EPSG:4326` CRS and spatial bounds, producing an Absolute Metric DSM with downloadable GeoTIFF.
+3. **`🎯 Calibrated Benchmark Pair`**: Loads the GAMUS Washington D.C. urban dataset (`DC_10_20_RGB.h5` + `DC_10_20_AGL.h5`) demonstrating automated metric calibration and validation (**MAE: 8.08 m, RMSE: 9.28 m**).
+4. **Export GeoTIFF**: Click **💾 Export GeoTIFF** in the top navigation bar or sidebar to download the standard geospatial elevation raster.
 
 ---
 
