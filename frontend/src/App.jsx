@@ -485,11 +485,25 @@ function App() {
                       Orbit
                     </button>
                     <button 
+                      className={`tool-btn ${viewerMode === 'fly' ? 'active' : ''}`}
+                      onClick={() => setViewerMode('fly')}
+                      title="Autonomous 360° Cinematic Orbital Flythrough"
+                    >
+                      ▶ Fly Through
+                    </button>
+                    <button 
                       className={`tool-btn ${viewerMode === 'first_person' ? 'active' : ''}`}
                       onClick={() => setViewerMode('first_person')}
-                      title="Flythrough Mode: Use W / A / S / D and mouse to fly through terrain"
+                      title="Drone Navigation: Use W / A / S / D and mouse to fly freely"
                     >
-                      Flythrough (WASD)
+                      WASD Drone
+                    </button>
+                    <button 
+                      className={`tool-btn ${wireframe ? 'active' : ''}`}
+                      onClick={() => setWireframe(!wireframe)}
+                      title="Toggle 3D Triangular Surface Mesh Topology"
+                    >
+                      📐 Mesh
                     </button>
                     <button 
                       className={`tool-btn ${viewerMode === 'measure_height' ? 'active' : ''}`}
@@ -501,7 +515,7 @@ function App() {
                     <button 
                       className="tool-btn icon-only"
                       onClick={() => setResetTrigger(prev => prev + 1)}
-                      title="Reset View"
+                      title="Reset Camera View"
                     >
                       🔄 Reset
                     </button>
