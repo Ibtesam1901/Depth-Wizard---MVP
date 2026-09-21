@@ -14,6 +14,8 @@ function App() {
   const [textureMode, setTextureMode] = useState('rgb')
   const [layoutMode, setLayoutMode] = useState('split') // 'split' | '3d' | '2d'
   const [lightbox, setLightbox] = useState(null) // { title, src }
+  const [wireframe, setWireframe] = useState(false)
+  const [resetTrigger, setResetTrigger] = useState(0)
 
   const handleUpload = async (e) => {
     e.preventDefault()
@@ -227,7 +229,15 @@ function App() {
                   />
                   <div className="file-display">
                     {file ? (
-                      <span className="file-name" title={file.name}>📄 {file.name}</span>
+                      <div className="file-selected-row">
+                        <span className="file-name" title={file.name}>📄 {file.name}</span>
+                        <button 
+                          type="button" 
+                          className="clear-file-btn" 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFile(null); }}
+                          title="Remove file"
+                        >✕</button>
+                      </div>
                     ) : (
                       <span className="file-placeholder">Choose image or GeoTIFF (.tif, .png, .jpg)</span>
                     )}
@@ -246,7 +256,15 @@ function App() {
                   />
                   <div className="file-display">
                     {referenceFile ? (
-                      <span className="file-name" title={referenceFile.name}>📊 {referenceFile.name}</span>
+                      <div className="file-selected-row">
+                        <span className="file-name" title={referenceFile.name}>📊 {referenceFile.name}</span>
+                        <button 
+                          type="button" 
+                          className="clear-file-btn" 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReferenceFile(null); }}
+                          title="Remove reference file"
+                        >✕</button>
+                      </div>
                     ) : (
                       <span className="file-placeholder">Ground truth DSM (.tif, .h5) for validation</span>
                     )}
@@ -473,6 +491,20 @@ function App() {
                       >
                         Measure Slope
                       </button>
+                      <button 
+                        className={`tool-btn ${wireframe ? 'active' : ''}`}
+                        onClick={() => setWireframe(!wireframe)}
+                        title="Toggle 3D Wireframe Mesh"
+                      >
+                        📐 Wireframe
+                      </button>
+                      <button 
+                        className="tool-btn"
+                        onClick={() => setResetTrigger(prev => prev + 1)}
+                        title="Reset 3D camera to default position"
+                      >
+                        🔄 Reset View
+                      </button>
                     </div>
 
                     <div className="toolbar-divider"></div>
@@ -499,6 +531,8 @@ function App() {
                         mode={viewerMode}
                         dsmType={result.dsm_type}
                         rangeElev={result.range_elev}
+                        wireframe={wireframe}
+                        resetTrigger={resetTrigger}
                       />
                     </Canvas>
 
@@ -592,10 +626,18 @@ function App() {
                 </div>
 
                 <div className="upload-prompt-badge">
-                  <span>👈 Upload an aerial image or GeoTIFF from the sidebar, or</span>
-                  <button type="button" className="hero-sample-btn" onClick={loadSample}>
-                    ⚡ Load Demo Scene
-                  </button>
+                  <span>Quick Start Demo Scenarios:</span>
+                  <div className="hero-btn-group">
+                    <button type="button" className="hero-sample-btn" onClick={loadSample} title="Load standard optical image for Relative DSM">
+                      ⚡ Optical RGB (rDSM)
+                    </button>
+                    <button type="button" className="hero-sample-btn geotiff" onClick={loadGeoTIFFSample} title="Load georeferenced GeoTIFF for Absolute Metric DSM">
+                      🌐 GeoTIFF (Georeferenced)
+                    </button>
+                    <button type="button" className="hero-sample-btn benchmark" onClick={loadBenchmarkSample} title="Load GAMUS Washington D.C. urban dataset with ground-truth DEM">
+                      🎯 Calibrated Benchmark Pair
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
