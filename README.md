@@ -105,29 +105,28 @@ DepthWizard bridges monocular deep learning and physical geodesy by providing:
 ### 4. 3D Texture Projection & Interactive WebGL Studio
 * Built with **Three.js** and **React Three Fiber**.
 * Dynamically displaces plane vertices based on the elevation raster and recomputes surface normals.
+* **Streamlined UI Ergonomics (ISRO-Aligned):**
+  * **Dual View (Default):** Side-by-side view featuring high-resolution 2D satellite maps on the left and the interactive 3D terrain canvas on the right.
+  * **Full 3D Mode:** Maximized 3D terrain viewport with collapsible control sidebar for immersive flythrough analysis.
 * **Multi-Texture Switching:**
   * **Optical RGB:** Projects the original optical satellite imagery over the 3D surface.
-  * **Elevation DSM (Viridis):** Colormapped topographic elevation contours.
+  * **Elevation DSM (Viridis):** Colormapped topographic elevation contours with dynamic Min/Mean/Max elevation legend.
   * **Confidence Map (Plasma):** Highlights spatial reliability and edge boundary uncertainty.
   * **Error Heatmap (Jet):** Displays ground-truth validation residuals.
-* **Mesh Wireframe Toggle:** Inspect underlying 3D TIN triangulation topology.
 
 ### 5. First-Person Flythrough & Terrain Analysis
 * **Arbitrary & First-Person Navigation:**
-  * **Orbit View:** Smooth orbital rotation, panning, and zoom damping.
-  * **First-Person (WASD):** Low-altitude drone flythrough with keyboard directional controls and mouse look.
-  * **▶ Flythrough:** Automated 60fps cinematic orbital flight path.
-  * **🔄 Reset View:** Instant camera re-centering.
+  * **Orbit View:** Smooth 360° orbital rotation, panning, and zoom damping.
+  * **Flythrough (WASD):** Low-altitude drone flythrough with keyboard directional controls and mouse look.
+  * **🔄 Reset View:** One-click camera re-centering.
 * **Quantitative Probing & Structural Measurements:**
   * **Building / Structure Height:** Click two points to measure real physical vertical height difference in meters ($m$):
     $$\Delta h_{\text{real}} = \frac{|\Delta Y|}{z_{\text{scale}}} \times \text{range\_elevation}$$
-  * **Terrain Slope:** Instant point-to-point slope angle in degrees ($^\circ$):
-    $$\theta = \arctan\left(\frac{|\Delta Y|}{\sqrt{\Delta X^2 + \Delta Z^2}}\right) \times \frac{180}{\pi}$$
   * Renders a physical amber measurement vector line and floating 3D badge.
 
 ### 6. Statistical Validation & Standard GeoTIFF Export
 * **Validation Metrics:** Computes Mean Absolute Error (**MAE**), Root Mean Square Error (**RMSE**), and Pearson Correlation (**$r$**) against reference elevation benchmarks.
-* **Standard GeoTIFF Generation:** In-memory `rasterio.MemoryFile` engine synthesizes compliant 32-bit floating-point GeoTIFFs (`.tif`) with embedded CRS and affine scaling, downloadable with one click from the UI or via REST API.
+* **Standard GeoTIFF Generation:** In-memory `rasterio.MemoryFile` engine synthesizes compliant 32-bit floating-point GeoTIFFs (`.tif`) with embedded CRS and affine scaling, downloadable with one click via the prominent **Export GeoTIFF** action in the top navigation bar.
 
 ---
 
@@ -256,11 +255,11 @@ npm run dev
 UI will be live at `http://localhost:5173`.
 
 ### 3. One-Click Demo Scenarios
-From the home screen or left sidebar, test the pipeline with one click:
-1. **`⚡ Optical RGB (rDSM)`**: Runs monocular inference on standard aerial imagery for relative relief inspection.
-2. **`🌐 GeoTIFF (Georeferenced)`**: Ingests `test_geo.tif`, preserves `EPSG:4326` CRS and spatial bounds, producing an Absolute Metric DSM with downloadable GeoTIFF.
-3. **`🎯 Calibrated Benchmark Pair`**: Loads the GAMUS Washington D.C. urban dataset (`DC_10_20_RGB.h5` + `DC_10_20_AGL.h5`) demonstrating automated metric calibration and validation (**MAE: 8.08 m, RMSE: 9.28 m**).
-4. **Export GeoTIFF**: Click **💾 Export GeoTIFF** in the top navigation bar or sidebar to download the standard geospatial elevation raster.
+From the home screen or left sidebar's **Quick Demo** row, test the pipeline with one click:
+1. **`Optical`**: Runs monocular inference on standard aerial imagery for relative relief inspection (rDSM).
+2. **`GeoTIFF`**: Ingests `test_geo.tif`, preserves `EPSG:4326` CRS and spatial bounds, producing an Absolute Metric DSM with downloadable GeoTIFF.
+3. **`Benchmark`**: Loads the GAMUS Washington D.C. urban dataset (`DC_10_20_RGB.h5` + `DC_10_20_AGL.h5`) demonstrating automated metric calibration and validation (**MAE: 8.08 m, RMSE: 9.28 m**).
+4. **Export GeoTIFF**: Click **Export GeoTIFF** in the top navigation bar to download the standard geospatial elevation raster (`.tif`).
 
 ---
 
