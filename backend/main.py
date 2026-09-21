@@ -45,7 +45,15 @@ def image_file_to_base64(filepath):
 async def download_dsm(filename: str):
     file_path = os.path.join(EXPORTS_DIR, filename)
     if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="image/tiff", filename=filename)
+        return FileResponse(
+            file_path, 
+            media_type="image/tiff", 
+            filename=filename,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Access-Control-Expose-Headers": "Content-Disposition"
+            }
+        )
     return {"error": "File not found"}
 
 @app.post("/process")

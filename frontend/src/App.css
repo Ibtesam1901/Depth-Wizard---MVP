@@ -249,6 +249,129 @@
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
 }
 
+.export-btn-top.exporting {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  border-color: #6ee7b7;
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.5);
+  transform: scale(1.02);
+}
+
+/* Floating Download Feedback Toast */
+.download-toast {
+  position: fixed;
+  top: 68px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  border-left: 4px solid #10b981;
+  border-radius: 10px;
+  padding: 10px 16px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 24px rgba(16, 185, 129, 0.25);
+  color: #f1f5f9;
+  font-family: inherit;
+  animation: toast-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 480px;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.18);
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.toast-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.toast-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.toast-meta {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-filename {
+  font-family: 'JetBrains Mono', monospace;
+  color: #a7f3d0;
+  font-weight: 500;
+}
+
+.toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.toast-redownload-btn {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #34d399;
+  text-decoration: none;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.toast-redownload-btn:hover {
+  background: rgba(16, 185, 129, 0.35);
+  color: #ffffff;
+  border-color: #34d399;
+}
+
+.toast-close-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.toast-close-btn:hover {
+  color: #f1f5f9;
+}
+
 .layout-switcher {
   display: flex;
   align-items: center;

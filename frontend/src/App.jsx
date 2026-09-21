@@ -20,6 +20,8 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [dragOverSource, setDragOverSource] = useState(false)
   const [processingStep, setProcessingStep] = useState(1)
+  const [downloadNotification, setDownloadNotification] = useState(null)
+  const [isExporting, setIsExporting] = useState(false)
 
   const handleUpload = async (e) => {
     e?.preventDefault?.()
@@ -106,20 +108,54 @@ function App() {
   }
 
   const downloadGeoTIFF = () => {
-    if (!result?.geotiff_base64) return
-    const byteCharacters = atob(result.geotiff_base64)
-    const byteNumbers = new Array(byteCharacters.length)
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i)
+    if (!result) return
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    const filename = result.export_filename || 'dsm_export.tif'
+    const downloadUrl = `${API_URL}/download-dsm/${filename}`
+    
+    setIsExporting(true)
+
+    try {
+      if (result.geotiff_base64) {
+        // Direct Base64 Blob download
+        const byteCharacters = atob(result.geotiff_base64)
+        const byteNumbers = new Array(byteCharacters.length)
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i)
+        }
+        const byteArray = new Uint8Array(byteNumbers)
+        const blob = new Blob([byteArray], { type: 'image/tiff' })
+        const blobUrl = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = blobUrl
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000)
+      } else {
+        // Direct download via backend URL
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.setAttribute('download', filename)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+
+      setDownloadNotification({
+        filename,
+        downloadUrl,
+        crs: result.crs || 'EPSG:4326',
+        dim: `${result.width} × ${result.height} px`
+      })
+      setTimeout(() => setDownloadNotification(null), 8000)
+    } catch (err) {
+      console.warn('Blob export encountered an error, opening backend URL:', err)
+      window.open(downloadUrl, '_blank')
+    } finally {
+      setTimeout(() => setIsExporting(false), 2200)
     }
-    const byteArray = new Uint8Array(byteNumbers)
-    const blob = new Blob([byteArray], { type: 'image/tiff' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = result.export_filename || 'dsm_export.tif'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
   }
 
   const getActiveTexture = () => {
@@ -187,20 +223,61 @@ function App() {
             </div>
 
             <button 
-              className="export-btn-top" 
+              className={`export-btn-top ${isExporting ? 'exporting' : ''}`} 
               onClick={downloadGeoTIFF}
               title="Export DSM as Geospatial GeoTIFF (.tif)"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Export GeoTIFF
+              {isExporting ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="15" height="15">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              )}
+              {isExporting ? '✓ Exported!' : 'Export GeoTIFF'}
             </button>
           </div>
         )}
       </header>
+
+      {/* Floating Download Feedback Toast */}
+      {downloadNotification && (
+        <div className="download-toast">
+          <div className="toast-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+          <div className="toast-content">
+            <div className="toast-title">GeoTIFF DSM Exported</div>
+            <div className="toast-meta">
+              <span className="toast-filename">{downloadNotification.filename}</span> • <span>{downloadNotification.crs}</span> • <span>{downloadNotification.dim}</span>
+            </div>
+          </div>
+          <div className="toast-actions">
+            <a 
+              href={downloadNotification.downloadUrl} 
+              download={downloadNotification.filename}
+              className="toast-redownload-btn"
+              title="Direct fallback download link"
+            >
+              Direct Link
+            </a>
+            <button 
+              className="toast-close-btn" 
+              onClick={() => setDownloadNotification(null)}
+              aria-label="Close notification"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Workspace Body */}
       <div className="app-body">
