@@ -138,7 +138,7 @@ function App() {
           <button 
             className={`sidebar-toggle-btn ${sidebarCollapsed ? 'collapsed' : ''}`}
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar to Maximize Canvas"}
+            title={sidebarCollapsed ? "Show Sidebar" : "Hide Sidebar"}
             aria-label="Toggle sidebar"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -157,102 +157,50 @@ function App() {
             </div>
             <div className="brand-title">
               <h1>DepthWizard</h1>
-              <span className="brand-badge">ISRO 26175 • Monocular 3D DSM</span>
+              <span className="brand-badge">ISRO 26175</span>
             </div>
           </div>
         </div>
-
-        <div className="nav-center-cluster">
-          {processing ? (
-            <div className="status-pill active-inference">
-              <span className="pulsing-radar"></span>
-              <span>Running Step {processingStep}/4: {
-                processingStep === 1 ? 'Ingesting Raster Data...' :
-                processingStep === 2 ? 'Depth Backbone Inference...' :
-                processingStep === 3 ? 'Calibrating Metric Scale...' :
-                'Synthesizing 3D Topography...'
-              }</span>
-            </div>
-          ) : result ? (
-            <div className="status-pill online">
-              <span className="dot online"></span>
-              <span>Model Ready • 3D Topography Active</span>
-            </div>
-          ) : (
-            <div className="status-pill idle">
-              <span className="dot idle"></span>
-              <span>Awaiting Optical Satellite / GeoTIFF Input</span>
-            </div>
-          )}
-        </div>
-
-        {result && (
-          <div className="nav-chips">
-            <span className="chip"><span className="dot online"></span> {result.width} × {result.height} px</span>
-            <span className="chip">{result.is_geotiff ? '🌐 GeoTIFF' : result.is_h5 ? '📦 HDF5' : '📷 Optical RGB'}</span>
-            <span className="chip highlight">
-              {result.dsm_type === 'metric' ? `Elev: ${result.min_elev?.toFixed(0)}m – ${result.max_elev?.toFixed(0)}m` : `Relief: ${result.range_elev?.toFixed(2)} (rDSM)`}
-            </span>
-          </div>
-        )}
 
         {result && (
           <div className="nav-actions-group">
+            <span className={`status-pill ${result.dsm_type === 'metric' ? 'online' : 'idle'}`}>
+              <span className="dot online"></span>
+              {result.dsm_type === 'metric' ? 'Absolute Metric DSM' : 'Relative DSM (rDSM)'}
+            </span>
+
+            <div className="layout-switcher">
+              <button 
+                className={`switcher-btn ${layoutMode === 'split' ? 'active' : ''}`}
+                onClick={() => setLayoutMode('split')}
+                title="Dual View: 2D Maps and 3D Terrain"
+              >
+                Dual View
+              </button>
+              <button 
+                className={`switcher-btn ${layoutMode === '3d' ? 'active' : ''}`}
+                onClick={() => setLayoutMode('3d')}
+                title="Full 3D Terrain Studio"
+              >
+                Full 3D
+              </button>
+            </div>
+
             <button 
               className="export-btn-top" 
               onClick={downloadGeoTIFF}
-              title="Download Standard Geospatial GeoTIFF Raster (.tif)"
+              title="Export DSM as Geospatial GeoTIFF (.tif)"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
               Export GeoTIFF
             </button>
-            <div className="layout-switcher">
-              <button 
-                className={`switcher-btn ${layoutMode === 'split' ? 'active' : ''}`}
-                onClick={() => setLayoutMode('split')}
-                title="Dual View: 2D Maps and 3D Terrain side-by-side"
-              >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="8" height="18" rx="2" />
-                <rect x="13" y="3" width="8" height="18" rx="2" />
-              </svg>
-              Dual View
-            </button>
-            <button 
-              className={`switcher-btn ${layoutMode === '3d' ? 'active' : ''}`}
-              onClick={() => setLayoutMode('3d')}
-              title="3D Studio: Maximized 3D terrain canvas"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M3.6 9h16.8" />
-                <path d="M3.6 15h16.8" />
-                <path d="M12 3a14 14 0 0 1 0 18" />
-                <path d="M12 3a14 14 0 0 0 0 18" />
-              </svg>
-              3D Studio
-            </button>
-            <button 
-              className={`switcher-btn ${layoutMode === '2d' ? 'active' : ''}`}
-              onClick={() => setLayoutMode('2d')}
-              title="2D Maps: High-resolution map comparison"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7" rx="1" />
-                <rect x="14" y="3" width="7" height="7" rx="1" />
-                <rect x="3" y="14" width="7" height="7" rx="1" />
-                <rect x="14" y="14" width="7" height="7" rx="1" />
-              </svg>
-              2D Maps
-            </button>
           </div>
-        </div>
-      )}
-    </header>
+        )}
+      </header>
 
       {/* Main Workspace Body */}
       <div className="app-body">
@@ -266,14 +214,13 @@ function App() {
                   <polyline points="17 8 12 3 7 8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                Input Data
+                Input Imagery
               </h3>
-              <span className="source-counter-badge">{file ? '1 Loaded' : '0 Loaded'}</span>
             </div>
             
             <form onSubmit={handleUpload}>
               <div className="form-group">
-                <label>Source Satellite / Aerial Imagery <span className="req">*</span></label>
+                <label>Optical RGB or GeoTIFF Image <span className="req">*</span></label>
                 <div 
                   className={`file-input-wrapper ${dragOverSource ? 'drag-over' : ''} ${file ? 'has-file' : ''}`}
                   onDragOver={(e) => { e.preventDefault(); setDragOverSource(true); }}
@@ -305,11 +252,6 @@ function App() {
                       </div>
                     ) : (
                       <span className="file-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" style={{marginRight: '6px', verticalAlign: '-2px'}}>
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                          <polyline points="17 8 12 3 7 8"/>
-                          <line x1="12" y1="3" x2="12" y2="15"/>
-                        </svg>
                         Drop image or GeoTIFF (.tif, .png, .jpg)
                       </span>
                     )}
@@ -318,7 +260,7 @@ function App() {
               </div>
 
               <div className="form-group">
-                <label>Reference DSM (Optional Benchmark)</label>
+                <label>Reference DSM (Optional Validation)</label>
                 <div className={`file-input-wrapper ${referenceFile ? 'has-file' : ''}`}>
                   <input 
                     type="file" 
@@ -338,18 +280,10 @@ function App() {
                         >✕</button>
                       </div>
                     ) : (
-                      <span className="file-placeholder">Ground truth DSM (.tif, .h5) for validation</span>
+                      <span className="file-placeholder">Ground-truth DEM (.tif, .h5) for MAE/RMSE</span>
                     )}
                   </div>
                 </div>
-              </div>
-              
-              <div className="form-group">
-                <label>Pipeline Mode</label>
-                <select value={mode} onChange={(e) => setMode(e.target.value)} className="select-input">
-                  <option value="auto">Auto (Detect GeoTIFF & Calibration)</option>
-                  <option value="relative">Relative Monocular (Force Standard)</option>
-                </select>
               </div>
 
               <button type="submit" className="submit-btn" disabled={!file || processing}>
@@ -359,7 +293,7 @@ function App() {
                   </span>
                 ) : (
                   <span className="btn-content">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
                       <polygon points="5 3 19 12 5 21 5 3" />
                     </svg>
                     Generate 3D Terrain
@@ -372,33 +306,37 @@ function App() {
                 <div className="processing-stepper">
                   <div className={`step-item ${processingStep >= 1 ? 'active' : ''} ${processingStep > 1 ? 'done' : ''}`}>
                     <div className="step-circle">{processingStep > 1 ? '✓' : '1'}</div>
-                    <span className="step-text">Ingesting Raster Image</span>
+                    <span className="step-text">Ingesting Imagery</span>
                   </div>
                   <div className={`step-item ${processingStep >= 2 ? 'active' : ''} ${processingStep > 2 ? 'done' : ''}`}>
                     <div className="step-circle">{processingStep > 2 ? '✓' : '2'}</div>
-                    <span className="step-text">Monocular Depth Inference</span>
+                    <span className="step-text">Depth Backbone Inference</span>
                   </div>
                   <div className={`step-item ${processingStep >= 3 ? 'active' : ''} ${processingStep > 3 ? 'done' : ''}`}>
                     <div className="step-circle">{processingStep > 3 ? '✓' : '3'}</div>
-                    <span className="step-text">Metric Scale Calibration</span>
+                    <span className="step-text">Metric DSM Calibration</span>
                   </div>
                   <div className={`step-item ${processingStep >= 4 ? 'active' : ''}`}>
                     <div className="step-circle">{processingStep >= 4 ? '✓' : '4'}</div>
-                    <span className="step-text">Synthesizing 3D Topography</span>
+                    <span className="step-text">Synthesizing 3D Mesh</span>
                   </div>
                 </div>
               )}
 
-              <div className="sample-loader-row">
-                <button type="button" className="sample-btn" onClick={loadSample}>
-                  ⚡ Load Optical RGB (rDSM)
-                </button>
-                <button type="button" className="sample-btn geotiff-btn" onClick={loadGeoTIFFSample}>
-                  🌐 Load GeoTIFF (Georeferenced)
-                </button>
-                <button type="button" className="sample-btn benchmark-btn" onClick={loadBenchmarkSample}>
-                  🎯 Load Benchmark Pair (Calibrated)
-                </button>
+              {/* Compact Quick Sample Row */}
+              <div className="demo-preset-row">
+                <span className="preset-label">Quick Demo:</span>
+                <div className="preset-btn-group">
+                  <button type="button" className="preset-btn" onClick={loadSample} title="Non-georeferenced optical image (rDSM)">
+                    Optical
+                  </button>
+                  <button type="button" className="preset-btn" onClick={loadGeoTIFFSample} title="Georeferenced GeoTIFF (Absolute DSM)">
+                    GeoTIFF
+                  </button>
+                  <button type="button" className="preset-btn" onClick={loadBenchmarkSample} title="Calibrated benchmark pair with MAE/RMSE">
+                    Benchmark
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -479,36 +417,24 @@ function App() {
                       ? 'Ground Truth Regression' 
                       : result.calibration_method === 'scene_prior' 
                       ? 'Scene Prior Metric Scaling' 
-                      : 'None (Visual Relief)'}
+                      : 'Relative Disparity (rDSM)'}
                   </strong>
-                </div>
-
-                <div className="export-action-box">
-                  <button 
-                    type="button" 
-                    className="export-dsm-btn" 
-                    onClick={downloadGeoTIFF}
-                    title="Export the final high-fidelity DSM as a standard GeoTIFF"
-                  >
-                    💾 Export GeoTIFF DSM (.tif)
-                  </button>
                 </div>
               </div>
             </div>
           )}
         </aside>
 
-        {/* Right Workspace: Dynamic Layout */}
+        {/* Right Workspace: Dual View / Full 3D */}
         <main className="workspace">
           {result ? (
             <div className={`workspace-layout layout-${layoutMode}`}>
-              {/* 2D Maps Section (Used in Split and 2D modes) */}
-              {(layoutMode === 'split' || layoutMode === '2d') && (
+              {/* 2D Maps Section (Used in Split Dual View) */}
+              {layoutMode === 'split' && (
                 <div className="maps-panel">
                   <div className="map-card" onClick={() => openLightbox('Original Satellite Image', result.rgb_base64)}>
                     <div className="map-card-header">
                       <span>Original Image</span>
-                      <button className="expand-btn" title="Click to inspect full resolution">🔍 Expand</button>
                     </div>
                     <div className="map-image-wrapper">
                       <img src={`data:image/png;base64,${result.rgb_base64}`} alt="Original Satellite" />
@@ -518,7 +444,6 @@ function App() {
                   <div className="map-card" onClick={() => openLightbox('Estimated Depth / Elevation Map', result.depth_base64)}>
                     <div className="map-card-header">
                       <span>Depth Map (DSM)</span>
-                      <button className="expand-btn" title="Click to inspect full resolution">🔍 Expand</button>
                     </div>
                     <div className="map-image-wrapper">
                       <img src={`data:image/png;base64,${result.depth_base64}`} alt="Depth Map" />
@@ -528,7 +453,6 @@ function App() {
                   <div className="map-card" onClick={() => openLightbox('Model Confidence Map', result.confidence_base64)}>
                     <div className="map-card-header">
                       <span>Confidence Map</span>
-                      <button className="expand-btn" title="Click to inspect full resolution">🔍 Expand</button>
                     </div>
                     <div className="map-image-wrapper">
                       <img src={`data:image/png;base64,${result.confidence_base64}`} alt="Confidence Map" />
@@ -539,7 +463,6 @@ function App() {
                     <div className="map-card" onClick={() => openLightbox('Ground Truth Error Map', result.error_base64)}>
                       <div className="map-card-header">
                         <span>Error Heatmap</span>
-                        <button className="expand-btn" title="Click to inspect full resolution">🔍 Expand</button>
                       </div>
                       <div className="map-image-wrapper">
                         <img src={`data:image/png;base64,${result.error_base64}`} alt="Error Map" />
@@ -549,91 +472,53 @@ function App() {
                 </div>
               )}
 
-              {/* 3D Terrain Studio Section (Used in Split and 3D modes) */}
-              {(layoutMode === 'split' || layoutMode === '3d') && (
-                <div className="viewer-viewport">
-                  {/* Floating 3D Toolbar */}
-                  <div className="floating-toolbar">
-                    <div className="toolbar-group">
-                      <button 
-                        className={`tool-btn ${viewerMode === 'orbit' ? 'active' : ''}`}
-                        onClick={() => setViewerMode('orbit')}
-                        title="Orbit Camera: Click and drag to rotate terrain"
-                      >
-                        Orbit
-                      </button>
-                      <button 
-                        className={`tool-btn ${viewerMode === 'first_person' ? 'active' : ''}`}
-                        onClick={() => setViewerMode('first_person')}
-                        title="WASD Drone Mode: Free-flight controls across 3D terrain"
-                      >
-                        Drone (WASD)
-                      </button>
-                      <button 
-                        className={`tool-btn ${viewerMode === 'fly' ? 'active' : ''}`}
-                        onClick={() => setViewerMode('fly')}
-                        title="Autonomous 360° Cinematic Orbital Flythrough"
-                      >
-                        ▶ Flythrough
-                      </button>
-                      <button 
-                        className={`tool-btn ${viewerMode === 'measure_height' ? 'active' : ''}`}
-                        onClick={() => setViewerMode('measure_height')}
-                        title="Probe Height: Click 2 points to measure vertical height difference"
-                      >
-                        Measure Height
-                      </button>
-                      <button 
-                        className={`tool-btn ${viewerMode === 'measure_slope' ? 'active' : ''}`}
-                        onClick={() => setViewerMode('measure_slope')}
-                        title="Probe Slope: Click 2 points to calculate surface inclination angle"
-                      >
-                        Measure Slope
-                      </button>
-                      <button 
-                        className={`tool-btn ${wireframe ? 'active' : ''}`}
-                        onClick={() => setWireframe(!wireframe)}
-                        title="Toggle 3D Triangular Surface Wireframe Mesh"
-                      >
-                        📐 Wireframe
-                      </button>
-                      <button 
-                        className="tool-btn"
-                        onClick={() => setResetTrigger(prev => prev + 1)}
-                        title="Reset 3D camera to default viewpoint"
-                      >
-                        🔄 Reset
-                      </button>
-                    </div>
-
-                    <div className="toolbar-divider"></div>
-
-                    {/* Relief Vertical Exaggeration Slider */}
-                    <div className="toolbar-relief-group" title="Topographic Vertical Relief Exaggeration Multiplier">
-                      <span className="relief-label">Relief: <strong>{zExaggeration.toFixed(1)}×</strong></span>
-                      <input 
-                        type="range" 
-                        min="0.2" 
-                        max="3.0" 
-                        step="0.1" 
-                        value={zExaggeration} 
-                        onChange={(e) => setZExaggeration(parseFloat(e.target.value))} 
-                        className="relief-slider"
-                      />
-                    </div>
-
-                    <div className="toolbar-divider"></div>
-
-                    <div className="toolbar-texture">
-                      <label>Texture:</label>
-                      <select value={textureMode} onChange={(e) => setTextureMode(e.target.value)}>
-                        <option value="rgb">Optical RGB</option>
-                        <option value="depth">Elevation DSM (Viridis)</option>
-                        <option value="confidence">Confidence Heatmap (Plasma)</option>
-                        {result.error_base64 && <option value="error">Error Heatmap (Jet)</option>}
-                      </select>
-                    </div>
+              {/* 3D Terrain Studio Section */}
+              <div className="viewer-viewport">
+                {/* Clean, Streamlined Floating 3D Toolbar */}
+                <div className="floating-toolbar">
+                  <div className="toolbar-group">
+                    <button 
+                      className={`tool-btn ${viewerMode === 'orbit' ? 'active' : ''}`}
+                      onClick={() => setViewerMode('orbit')}
+                      title="Orbit View: Click and drag to rotate terrain"
+                    >
+                      Orbit
+                    </button>
+                    <button 
+                      className={`tool-btn ${viewerMode === 'first_person' ? 'active' : ''}`}
+                      onClick={() => setViewerMode('first_person')}
+                      title="Flythrough Mode: Use W / A / S / D and mouse to fly through terrain"
+                    >
+                      Flythrough (WASD)
+                    </button>
+                    <button 
+                      className={`tool-btn ${viewerMode === 'measure_height' ? 'active' : ''}`}
+                      onClick={() => setViewerMode('measure_height')}
+                      title="Probe Height: Click 2 points to measure physical height difference in meters"
+                    >
+                      📏 Measure Height
+                    </button>
+                    <button 
+                      className="tool-btn icon-only"
+                      onClick={() => setResetTrigger(prev => prev + 1)}
+                      title="Reset View"
+                    >
+                      🔄 Reset
+                    </button>
                   </div>
+
+                  <div className="toolbar-divider"></div>
+
+                  <div className="toolbar-texture">
+                    <label>Texture:</label>
+                    <select value={textureMode} onChange={(e) => setTextureMode(e.target.value)}>
+                      <option value="rgb">Optical RGB</option>
+                      <option value="depth">Elevation DSM</option>
+                      <option value="confidence">Confidence</option>
+                      {result.error_base64 && <option value="error">Error Heatmap</option>}
+                    </select>
+                  </div>
+                </div>
 
                   {/* 3D Canvas */}
                   <div className="canvas-container">
@@ -680,52 +565,7 @@ function App() {
                       </div>
                     )}
                   </div>
-
-                  {/* Quick Thumbnails Dock in 3D Mode */}
-                  {layoutMode === '3d' && (
-                    <div className="dock-thumbnails">
-                      <div 
-                        className={`dock-item ${textureMode === 'rgb' ? 'active' : ''}`}
-                        onClick={() => setTextureMode('rgb')}
-                        title="Texture: Optical RGB (Click to apply / Double-click to expand)"
-                        onDoubleClick={() => openLightbox('Original Satellite Image', result.rgb_base64)}
-                      >
-                        <img src={`data:image/png;base64,${result.rgb_base64}`} alt="RGB" />
-                        <span>RGB</span>
-                      </div>
-                      <div 
-                        className={`dock-item ${textureMode === 'depth' ? 'active' : ''}`}
-                        onClick={() => setTextureMode('depth')}
-                        title="Texture: Elevation DSM (Click to apply / Double-click to expand)"
-                        onDoubleClick={() => openLightbox('Estimated Depth / DSM', result.depth_base64)}
-                      >
-                        <img src={`data:image/png;base64,${result.depth_base64}`} alt="Depth" />
-                        <span>DSM</span>
-                      </div>
-                      <div 
-                        className={`dock-item ${textureMode === 'confidence' ? 'active' : ''}`}
-                        onClick={() => setTextureMode('confidence')}
-                        title="Texture: Confidence Heatmap (Click to apply / Double-click to expand)"
-                        onDoubleClick={() => openLightbox('Confidence Map', result.confidence_base64)}
-                      >
-                        <img src={`data:image/png;base64,${result.confidence_base64}`} alt="Confidence" />
-                        <span>Confidence</span>
-                      </div>
-                      {result.error_base64 && (
-                        <div 
-                          className={`dock-item ${textureMode === 'error' ? 'active' : ''}`}
-                          onClick={() => setTextureMode('error')}
-                          title="Texture: Error Heatmap (Click to apply / Double-click to expand)"
-                          onDoubleClick={() => openLightbox('Error Heatmap', result.error_base64)}
-                        >
-                          <img src={`data:image/png;base64,${result.error_base64}`} alt="Error" />
-                          <span>Error</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
-              )}
             </div>
           ) : (
             <div className="hero-placeholder">
