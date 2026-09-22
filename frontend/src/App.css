@@ -940,6 +940,16 @@
   font-weight: 600;
 }
 
+.cold-start-note {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(139, 92, 246, 0.25);
+  font-size: 0.72rem;
+  color: #c4b5fd;
+  text-align: center;
+  line-height: 1.3;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }

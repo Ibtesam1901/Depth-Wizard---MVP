@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import TerrainViewer from './TerrainViewer'
 import './App.css'
@@ -35,6 +35,16 @@ function App() {
   const [showApiModal, setShowApiModal] = useState(false)
   const [apiTesting, setApiTesting] = useState(false)
   const [apiStatus, setApiStatus] = useState(null) // null | 'connected' | 'error'
+
+  // Pre-warm / wake-up cloud backend silently as soon as page is opened
+  useEffect(() => {
+    try {
+      const endpoint = apiUrl.replace(/\/+$/, '')
+      fetch(`${endpoint}/health`).catch(() => {})
+    } catch {
+      // silent pre-warm
+    }
+  }, [apiUrl])
 
   const testApiHealth = async (targetUrl = tempApiUrl) => {
     setApiTesting(true)
@@ -486,6 +496,9 @@ function App() {
                   <div className={`step-item ${processingStep >= 4 ? 'active' : ''}`}>
                     <div className="step-circle">{processingStep >= 4 ? '✓' : '4'}</div>
                     <span className="step-text">Synthesizing 3D Mesh</span>
+                  </div>
+                  <div className="cold-start-note">
+                    ⚡ <em>If server was idle, initial spin-up takes ~30–45s</em>
                   </div>
                 </div>
               )}
