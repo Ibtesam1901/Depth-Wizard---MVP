@@ -118,6 +118,9 @@ async def process(
         with open(ref_temp_path, "wb") as buffer:
             shutil.copyfileobj(reference_file.file, buffer)
 
+    import time
+    t_start = time.perf_counter()
+
     try:
         ext = os.path.splitext(file.filename)[1].lower()
         is_geotiff = ext in ['.tif', '.tiff']
@@ -127,6 +130,7 @@ async def process(
             is_geotiff = False
 
         # 1. Geospatial Metadata Extraction
+        t0 = time.perf_counter()
         geo_metadata = extract_geospatial_metadata(temp_path)
         
         # 2. Ingest Imagery into PIL Image
@@ -153,8 +157,10 @@ async def process(
         buf_rgb = io.BytesIO()
         pil_img.save(buf_rgb, format="PNG")
         rgb_b64 = base64.b64encode(buf_rgb.getvalue()).decode("utf-8")
+        t_ingest = time.perf_counter() - t0
 
         # 3. Monocular Depth Estimation (Depth Anything V2)
+        t0 = time.perf_counter()
         depth_estimator = DepthEstimator.get_instance()
         raw_depth, norm_depth = depth_estimator.infer(pil_img)
         depth_b64 = array_to_base64(norm_depth, cv2.COLORMAP_VIRIDIS)
@@ -162,8 +168,10 @@ async def process(
         # 4. Spatial Confidence / Dispersion Index
         confidence = compute_spatial_confidence(norm_depth)
         confidence_b64 = array_to_base64(confidence, cv2.COLORMAP_PLASMA)
+        t_depth = time.perf_counter() - t0
 
         # 5. Metric Scale Calibration Engine
+        t0 = time.perf_counter()
         metric_dsm = None
         metrics = None
         error_b64 = None
@@ -198,8 +206,10 @@ async def process(
 
         active_dsm = metric_dsm if metric_dsm is not None else norm_depth
         dsm_type = "metric" if metric_dsm is not None else "relative"
+        t_calib = time.perf_counter() - t0
 
         # 6. Topographic Slope Map Generation
+        t0 = time.perf_counter()
         center_lat = (geo_metadata["bounds"]["bottom"] + geo_metadata["bounds"]["top"]) / 2.0 if (geo_metadata and geo_metadata.get("bounds")) else 20.0
         slope_deg, slope_stats, slope_b64 = calculate_slope_map(
             active_dsm,
@@ -208,8 +218,10 @@ async def process(
             crs=geo_metadata.get("crs") if is_geotiff else None,
             latitude=center_lat
         )
+        t_slope = time.perf_counter() - t0
 
         # 7. GeoTIFF Export Generation
+        t0 = time.perf_counter()
         export_filename = f"dsm_{os.path.splitext(os.path.basename(file.filename))[0]}.tif"
         export_path = os.path.join(EXPORTS_DIR, export_filename)
 
@@ -223,6 +235,8 @@ async def process(
             crs=crs_to_use
         )
         geotiff_b64 = base64.b64encode(geotiff_bytes).decode("utf-8")
+        t_export = time.perf_counter() - t0
+        t_total = time.perf_counter() - t_start
 
         # Elevation Analysis Statistics
         min_elev = float(np.nanmin(active_dsm))
@@ -274,6 +288,14 @@ async def process(
             "max_elev": max_elev,
             "mean_elev": mean_elev,
             "range_elev": range_elev,
+            "timings": {
+                "ingest_metadata": round(t_ingest, 2),
+                "depth_inference": round(t_depth, 2),
+                "calibration": round(t_calib, 2),
+                "slope_analysis": round(t_slope, 2),
+                "geotiff_export": round(t_export, 2),
+                "total": round(t_total, 2)
+            }
         }
 
         if metrics:

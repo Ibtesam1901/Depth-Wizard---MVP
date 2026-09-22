@@ -201,6 +201,7 @@ export default function TerrainViewer({
         text: `Height: ${realHeightDiff.toFixed(2)} ${unit}`,
         topElev: (Math.max(p1.y, p2.y) / zScale * actualRange + minElev).toFixed(1),
         groundElev: (Math.min(p1.y, p2.y) / zScale * actualRange + minElev).toFixed(1),
+        diff: realHeightDiff.toFixed(2),
         unit,
         p1,
         p2
@@ -289,10 +290,18 @@ export default function TerrainViewer({
       {/* 3D Measurement Overlay Card */}
       {measurement && points.length === 2 && (
         <Html position={[points[1].x, points[1].y + 4, points[1].z]} center distanceFactor={160}>
-          <div className="measurement-3d-tag">
-            <div className="tag-header">📏 Structure Height</div>
-            <div className="tag-val">{measurement.text}</div>
-            <div className="tag-sub">Top: {measurement.topElev} {measurement.unit} • Base: {measurement.groundElev} {measurement.unit}</div>
+          <div className="measurement-3d-tag structural-seq-tag">
+            <div className="tag-header">🏢 Two-Point Structural Height</div>
+            <div className="tag-seq-row">
+              <span className="dot roof-dot">●</span> <strong>ROOF:</strong> {measurement.topElev} {measurement.unit}
+            </div>
+            <div className="tag-seq-line">
+              ↕ <strong>ΔZ = {measurement.diff} {measurement.unit}</strong>
+            </div>
+            <div className="tag-seq-row">
+              <span className="dot ground-dot">●</span> <strong>GROUND:</strong> {measurement.groundElev} {measurement.unit}
+            </div>
+            <div className="tag-val-badge">STRUCTURAL HEIGHT: ΔZ = {measurement.diff} {measurement.unit}</div>
           </div>
         </Html>
       )}
