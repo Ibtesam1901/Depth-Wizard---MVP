@@ -19,6 +19,16 @@ from rasterio.io import MemoryFile
 app = FastAPI(title="DepthWizard API", description="Single-View Height Estimation & 3D Flythrough Pipeline")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
+@app.get("/")
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "online",
+        "service": "DepthWizard API",
+        "description": "Single-View Height Estimation & 3D Flythrough Pipeline",
+        "version": "1.0.0"
+    }
+
 EXPORTS_DIR = "exports"
 os.makedirs(EXPORTS_DIR, exist_ok=True)
 
@@ -221,4 +231,5 @@ async def process(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)

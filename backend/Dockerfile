@@ -1,10 +1,20 @@
-FROM python:3.10
+FROM python:3.10-slim
 
-# Set up a new user named "user" with user ID 1000
-# This is a requirement for Hugging Face Spaces security policies
+# Install system dependencies required for OpenCV, GDAL/rasterio, and PyTorch
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libgl1 \
+    libglib2.0-0 \
+    libgomp1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up a user named "user" with user ID 1000 (required for Hugging Face Spaces security)
 RUN useradd -m -u 1000 user
 USER user
-ENV PATH="/home/user/.local/bin:$PATH"
+ENV PATH="/home/user/.local/bin:$PATH" \
+    PORT=7860 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
@@ -16,4 +26,5 @@ COPY --chown=user . .
 
 EXPOSE 7860
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+# Dynamically bind to $PORT provided by cloud hosts (Render/Railway), fallback to 7860 (Hugging Face)
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-7860}"]

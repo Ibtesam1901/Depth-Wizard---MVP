@@ -17,16 +17,70 @@ function App() {
   const [wireframe, setWireframe] = useState(false)
   const [resetTrigger, setResetTrigger] = useState(0)
   const [zExaggeration, setZExaggeration] = useState(1.0)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return typeof window !== 'undefined' && window.innerWidth <= 1024
+  })
   const [dragOverSource, setDragOverSource] = useState(false)
   const [processingStep, setProcessingStep] = useState(1)
   const [downloadNotification, setDownloadNotification] = useState(null)
   const [isExporting, setIsExporting] = useState(false)
 
+  // Cloud API Endpoint Configuration
+  const [apiUrl, setApiUrl] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('depthwizard_api_url')) ||
+      import.meta.env.VITE_API_URL ||
+      'http://localhost:8000'
+  })
+  const [tempApiUrl, setTempApiUrl] = useState(apiUrl)
+  const [showApiModal, setShowApiModal] = useState(false)
+  const [apiTesting, setApiTesting] = useState(false)
+  const [apiStatus, setApiStatus] = useState(null) // null | 'connected' | 'error'
+
+  const testApiHealth = async (targetUrl = tempApiUrl) => {
+    setApiTesting(true)
+    setApiStatus(null)
+    try {
+      const cleanUrl = targetUrl.trim().replace(/\/+$/, '')
+      const res = await fetch(`${cleanUrl}/health`, { signal: AbortSignal.timeout(5000) })
+      if (res.ok) {
+        setApiStatus('connected')
+      } else {
+        setApiStatus('error')
+      }
+    } catch {
+      setApiStatus('error')
+    } finally {
+      setApiTesting(false)
+    }
+  }
+
+  const saveApiUrl = () => {
+    const cleanUrl = tempApiUrl.trim().replace(/\/+$/, '') || 'http://localhost:8000'
+    setApiUrl(cleanUrl)
+    setTempApiUrl(cleanUrl)
+    localStorage.setItem('depthwizard_api_url', cleanUrl)
+    setShowApiModal(false)
+  }
+
+  const resetApiUrl = () => {
+    const defaultUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    setApiUrl(defaultUrl)
+    setTempApiUrl(defaultUrl)
+    localStorage.removeItem('depthwizard_api_url')
+    setShowApiModal(false)
+  }
+
+  const autoCollapseMobile = () => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+      setSidebarCollapsed(true)
+    }
+  }
+
   const handleUpload = async (e) => {
     e?.preventDefault?.()
     if (!file) return
 
+    autoCollapseMobile()
     setProcessing(true)
     setProcessingStep(1)
 
@@ -41,8 +95,8 @@ function App() {
     }
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-      const response = await fetch(`${API_URL}/process?mode=${mode}&calibration=${calibration}`, {
+      const endpoint = apiUrl.replace(/\/+$/, '')
+      const response = await fetch(`${endpoint}/process?mode=${mode}&calibration=${calibration}`, {
         method: 'POST',
         body: formData,
       })
@@ -53,7 +107,7 @@ function App() {
       setResult(data)
     } catch (error) {
       console.error('Upload failed:', error)
-      alert(`Processing failed: ${error.message}. Please make sure the backend is running.`)
+      alert(`Processing failed: ${error.message}. Please verify that backend is running at ${apiUrl}`)
     } finally {
       clearTimeout(stepTimer1)
       clearTimeout(stepTimer2)
@@ -69,6 +123,7 @@ function App() {
 
   const loadSample = async () => {
     try {
+      autoCollapseMobile()
       const res = await fetch('/sample.jpg')
       const blob = await res.blob()
       const sampleFile = new File([blob], 'satellite_sample.jpg', { type: 'image/jpeg' })
@@ -81,6 +136,7 @@ function App() {
 
   const loadGeoTIFFSample = async () => {
     try {
+      autoCollapseMobile()
       const res = await fetch('/demo_geotiff.tif')
       const blob = await res.blob()
       const sampleFile = new File([blob], 'test_geo.tif', { type: 'image/tiff' })
@@ -93,6 +149,7 @@ function App() {
 
   const loadBenchmarkSample = async () => {
     try {
+      autoCollapseMobile()
       const resRgb = await fetch('/demo_rgb.h5')
       const blobRgb = await resRgb.blob()
       const sampleRgb = new File([blobRgb], 'DC_10_20_RGB.h5', { type: 'application/x-hdf' })
@@ -109,9 +166,9 @@ function App() {
 
   const downloadGeoTIFF = () => {
     if (!result) return
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    const endpoint = apiUrl.replace(/\/+$/, '')
     const filename = result.export_filename || 'dsm_export.tif'
-    const downloadUrl = `${API_URL}/download-dsm/${filename}`
+    const downloadUrl = `${endpoint}/download-dsm/${filename}`
     
     setIsExporting(true)
 
@@ -198,50 +255,74 @@ function App() {
           </div>
         </div>
 
-        {result && (
-          <div className="nav-actions-group">
-            <span className={`status-pill ${result.dsm_type === 'metric' ? 'online' : 'idle'}`}>
-              <span className="dot online"></span>
-              {result.dsm_type === 'metric' ? 'Absolute Metric DSM' : 'Relative DSM (rDSM)'}
-            </span>
+        <div className="nav-right-cluster">
+          {result && (
+            <div className="nav-actions-group">
+              <span className={`status-pill ${result.dsm_type === 'metric' ? 'online' : 'idle'}`}>
+                <span className="dot online"></span>
+                <span className="status-text-full">{result.dsm_type === 'metric' ? 'Absolute Metric DSM' : 'Relative DSM (rDSM)'}</span>
+                <span className="status-text-short">{result.dsm_type === 'metric' ? 'Metric DSM' : 'rDSM'}</span>
+              </span>
 
-            <div className="layout-switcher">
+              <div className="layout-switcher">
+                <button 
+                  className={`switcher-btn ${layoutMode === 'split' ? 'active' : ''}`}
+                  onClick={() => setLayoutMode('split')}
+                  title="Dual View: 2D Maps and 3D Terrain"
+                >
+                  <span className="switcher-text-full">Dual View</span>
+                  <span className="switcher-text-short">Dual</span>
+                </button>
+                <button 
+                  className={`switcher-btn ${layoutMode === '3d' ? 'active' : ''}`}
+                  onClick={() => setLayoutMode('3d')}
+                  title="Full 3D Terrain Studio"
+                >
+                  <span className="switcher-text-full">Full 3D</span>
+                  <span className="switcher-text-short">3D</span>
+                </button>
+                <button 
+                  className={`switcher-btn ${layoutMode === '2d' ? 'active' : ''}`}
+                  onClick={() => setLayoutMode('2d')}
+                  title="2D Maps and Heatmaps"
+                >
+                  <span className="switcher-text-full">2D Maps</span>
+                  <span className="switcher-text-short">2D</span>
+                </button>
+              </div>
+
               <button 
-                className={`switcher-btn ${layoutMode === 'split' ? 'active' : ''}`}
-                onClick={() => setLayoutMode('split')}
-                title="Dual View: 2D Maps and 3D Terrain"
+                className={`export-btn-top ${isExporting ? 'exporting' : ''}`} 
+                onClick={downloadGeoTIFF}
+                title="Export DSM as Geospatial GeoTIFF (.tif)"
               >
-                Dual View
-              </button>
-              <button 
-                className={`switcher-btn ${layoutMode === '3d' ? 'active' : ''}`}
-                onClick={() => setLayoutMode('3d')}
-                title="Full 3D Terrain Studio"
-              >
-                Full 3D
+                {isExporting ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="15" height="15">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                )}
+                <span className="export-text-full">{isExporting ? '✓ Exported!' : 'Export GeoTIFF'}</span>
+                <span className="export-text-short">{isExporting ? '✓' : 'Export'}</span>
               </button>
             </div>
+          )}
 
-            <button 
-              className={`export-btn-top ${isExporting ? 'exporting' : ''}`} 
-              onClick={downloadGeoTIFF}
-              title="Export DSM as Geospatial GeoTIFF (.tif)"
-            >
-              {isExporting ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="15" height="15">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-              )}
-              {isExporting ? '✓ Exported!' : 'Export GeoTIFF'}
-            </button>
-          </div>
-        )}
+          <button 
+            className="api-config-btn"
+            onClick={() => { setTempApiUrl(apiUrl); setApiStatus(null); setShowApiModal(true); }}
+            title={`Active Backend API: ${apiUrl}`}
+            aria-label="Configure API Endpoint"
+          >
+            <span className="api-dot online"></span>
+            <span className="api-btn-text">API</span>
+          </button>
+        </div>
       </header>
 
       {/* Floating Download Feedback Toast */}
@@ -281,6 +362,15 @@ function App() {
 
       {/* Main Workspace Body */}
       <div className="app-body">
+        {/* Mobile/Tablet Backdrop Scrim */}
+        {!sidebarCollapsed && (
+          <div 
+            className="sidebar-backdrop" 
+            onClick={() => setSidebarCollapsed(true)}
+            aria-label="Close sidebar overlay"
+          />
+        )}
+
         {/* Left Sidebar: Controls & Analytics */}
         <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
           <div className="panel-card controls-card">
@@ -502,12 +592,12 @@ function App() {
           )}
         </aside>
 
-        {/* Right Workspace: Dual View / Full 3D */}
+        {/* Right Workspace: Dual View / Full 3D / 2D Maps */}
         <main className="workspace">
           {result ? (
             <div className={`workspace-layout layout-${layoutMode}`}>
-              {/* 2D Maps Section (Used in Split Dual View) */}
-              {layoutMode === 'split' && (
+              {/* 2D Maps Section (Used in Split Dual View or 2D Only) */}
+              {(layoutMode === 'split' || layoutMode === '2d') && (
                 <div className="maps-panel">
                   <div className="map-card" onClick={() => openLightbox('Original Satellite Image', result.rgb_base64)}>
                     <div className="map-card-header">
@@ -550,66 +640,67 @@ function App() {
               )}
 
               {/* 3D Terrain Studio Section */}
-              <div className="viewer-viewport">
-                {/* Clean, Streamlined Floating 3D Toolbar */}
-                <div className="floating-toolbar">
-                  <div className="toolbar-group">
-                    <button 
-                      className={`tool-btn ${viewerMode === 'orbit' ? 'active' : ''}`}
-                      onClick={() => setViewerMode('orbit')}
-                      title="Orbit View: Click and drag to rotate terrain"
-                    >
-                      Orbit
-                    </button>
-                    <button 
-                      className={`tool-btn ${viewerMode === 'fly' ? 'active' : ''}`}
-                      onClick={() => setViewerMode('fly')}
-                      title="Autonomous 360° Cinematic Orbital Flythrough"
-                    >
-                      ▶ Fly Through
-                    </button>
-                    <button 
-                      className={`tool-btn ${viewerMode === 'first_person' ? 'active' : ''}`}
-                      onClick={() => setViewerMode('first_person')}
-                      title="Drone Navigation: Use W / A / S / D and mouse to fly freely"
-                    >
-                      WASD Drone
-                    </button>
-                    <button 
-                      className={`tool-btn ${wireframe ? 'active' : ''}`}
-                      onClick={() => setWireframe(!wireframe)}
-                      title="Toggle 3D Triangular Surface Mesh Topology"
-                    >
-                      📐 Mesh
-                    </button>
-                    <button 
-                      className={`tool-btn ${viewerMode === 'measure_height' ? 'active' : ''}`}
-                      onClick={() => setViewerMode('measure_height')}
-                      title="Probe Height: Click 2 points to measure physical height difference in meters"
-                    >
-                      📏 Measure Height
-                    </button>
-                    <button 
-                      className="tool-btn icon-only"
-                      onClick={() => setResetTrigger(prev => prev + 1)}
-                      title="Reset Camera View"
-                    >
-                      🔄 Reset
-                    </button>
-                  </div>
+              {(layoutMode === 'split' || layoutMode === '3d') && (
+                <div className="viewer-viewport">
+                  {/* Clean, Streamlined Floating 3D Toolbar */}
+                  <div className="floating-toolbar">
+                    <div className="toolbar-group">
+                      <button 
+                        className={`tool-btn ${viewerMode === 'orbit' ? 'active' : ''}`}
+                        onClick={() => setViewerMode('orbit')}
+                        title="Orbit View: Click and drag to rotate terrain"
+                      >
+                        Orbit
+                      </button>
+                      <button 
+                        className={`tool-btn ${viewerMode === 'fly' ? 'active' : ''}`}
+                        onClick={() => setViewerMode('fly')}
+                        title="Autonomous 360° Cinematic Orbital Flythrough"
+                      >
+                        ▶ Fly Through
+                      </button>
+                      <button 
+                        className={`tool-btn ${viewerMode === 'first_person' ? 'active' : ''}`}
+                        onClick={() => setViewerMode('first_person')}
+                        title="Drone Navigation: Use W / A / S / D and mouse to fly freely"
+                      >
+                        WASD Drone
+                      </button>
+                      <button 
+                        className={`tool-btn ${wireframe ? 'active' : ''}`}
+                        onClick={() => setWireframe(!wireframe)}
+                        title="Toggle 3D Triangular Surface Mesh Topology"
+                      >
+                        📐 Mesh
+                      </button>
+                      <button 
+                        className={`tool-btn ${viewerMode === 'measure_height' ? 'active' : ''}`}
+                        onClick={() => setViewerMode('measure_height')}
+                        title="Probe Height: Click 2 points to measure physical height difference in meters"
+                      >
+                        📏 Measure Height
+                      </button>
+                      <button 
+                        className="tool-btn icon-only"
+                        onClick={() => setResetTrigger(prev => prev + 1)}
+                        title="Reset Camera View"
+                      >
+                        🔄 Reset
+                      </button>
+                    </div>
 
-                  <div className="toolbar-divider"></div>
+                    <div className="toolbar-divider"></div>
 
-                  <div className="toolbar-texture">
-                    <label>Texture:</label>
-                    <select value={textureMode} onChange={(e) => setTextureMode(e.target.value)}>
-                      <option value="rgb">Optical RGB</option>
-                      <option value="depth">Elevation DSM</option>
-                      <option value="confidence">Confidence</option>
-                      {result.error_base64 && <option value="error">Error Heatmap</option>}
-                    </select>
+                    <div className="toolbar-texture">
+                      <label>Texture:</label>
+                      <select value={textureMode} onChange={(e) => setTextureMode(e.target.value)}>
+                        <option value="rgb">Optical RGB</option>
+                        <option value="depth">Elevation DSM</option>
+                        <option value="confidence">Confidence</option>
+                        {result.error_base64 && <option value="error">Error Heatmap</option>}
+                      </select>
+                    </div>
                   </div>
-                </div>
 
                   {/* 3D Canvas */}
                   <div className="canvas-container">
@@ -657,6 +748,7 @@ function App() {
                     )}
                   </div>
                 </div>
+              )}
             </div>
           ) : (
             <div className="hero-placeholder">
@@ -778,6 +870,60 @@ function App() {
             </div>
             <div className="lightbox-body">
               <img src={lightbox.src} alt={lightbox.title} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cloud API Endpoint Configuration Modal */}
+      {showApiModal && (
+        <div className="lightbox-backdrop" onClick={() => setShowApiModal(false)}>
+          <div className="lightbox-content api-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="lightbox-header">
+              <h3>🌐 Backend API Cloud Endpoint</h3>
+              <button className="close-btn" onClick={() => setShowApiModal(false)}>✕</button>
+            </div>
+            <div className="api-modal-body">
+              <p className="api-modal-desc">
+                Connect this frontend to your deployed DepthWizard backend on <strong>Render</strong>, <strong>Hugging Face Spaces</strong>, or <strong>Railway</strong>:
+              </p>
+              <div className="api-input-group">
+                <input 
+                  type="url" 
+                  value={tempApiUrl} 
+                  onChange={(e) => { setTempApiUrl(e.target.value); setApiStatus(null); }}
+                  placeholder="https://your-backend.onrender.com"
+                  className="api-url-input"
+                />
+                <button 
+                  type="button" 
+                  className="api-test-btn" 
+                  onClick={() => testApiHealth(tempApiUrl)}
+                  disabled={apiTesting}
+                >
+                  {apiTesting ? 'Testing...' : 'Test Ping'}
+                </button>
+              </div>
+
+              {apiStatus === 'connected' && (
+                <div className="api-status-msg success">
+                  ✓ Connected successfully to DepthWizard backend API!
+                </div>
+              )}
+              {apiStatus === 'error' && (
+                <div className="api-status-msg error">
+                  ✕ Could not connect to {tempApiUrl}. Verify the server is running and CORS is allowed.
+                </div>
+              )}
+
+              <div className="api-modal-actions">
+                <button type="button" className="api-reset-btn" onClick={resetApiUrl}>
+                  Reset to Default
+                </button>
+                <button type="button" className="api-save-btn" onClick={saveApiUrl}>
+                  Save & Apply
+                </button>
+              </div>
             </div>
           </div>
         </div>
