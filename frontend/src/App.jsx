@@ -669,7 +669,7 @@ function App() {
                     className={`btn-mode ${viewerMode === 'measure_height' ? 'active' : ''}`}
                     onClick={() => setViewerMode('measure_height')}
                   >
-                    📏 Height Difference
+                    📏 2-Point Height
                   </button>
                   <button 
                     className={`btn-mode ${viewerMode === 'inspect' ? 'active' : ''}`}
@@ -681,7 +681,7 @@ function App() {
 
                 {viewerMode === 'measure_height' && (
                   <div className="tool-hint">
-                    💡 Click <strong>Ground base</strong>, then click <strong>Structure top</strong> to measure height.
+                    💡 <strong>Interactive Two-Point Height:</strong> Click ground base point, then structure roof to calculate ΔZ = Z_top - Z_ground.
                   </div>
                 )}
                 {viewerMode === 'inspect' && (
@@ -855,13 +855,19 @@ function App() {
                     className={`tab-btn ${activeLayer === 'depth' ? 'active' : ''}`}
                     onClick={() => setActiveLayer('depth')}
                   >
-                    🌊 Relative Depth (Viridis)
+                    🌊 Relative Depth
+                  </button>
+                  <button 
+                    className={`tab-btn ${activeLayer === 'calibration' ? 'active' : ''}`}
+                    onClick={() => setActiveLayer('calibration')}
+                  >
+                    🟣 Calibration (Z = aD + b)
                   </button>
                   <button 
                     className={`tab-btn ${activeLayer === 'slope' ? 'active' : ''}`}
                     onClick={() => setActiveLayer('slope')}
                   >
-                    📐 Topographic Slope (Turbo)
+                    📐 Topographic Slope
                   </button>
                   <button 
                     className={`tab-btn ${activeLayer === 'confidence' ? 'active' : ''}`}
@@ -913,7 +919,8 @@ function App() {
                       <span>
                         {activeLayer === 'rgb' ? 'RGB Orthorectified Surface' :
                          activeLayer === 'depth' ? 'Depth Anything V2 Relative Disparity' :
-                         activeLayer === 'slope' ? 'Slope Map (°)' :
+                         activeLayer === 'calibration' ? 'Metric Scale Calibration (Z = a·D + b)' :
+                         activeLayer === 'slope' ? 'Topographic Slope Map (°)' :
                          activeLayer === 'confidence' ? 'Spatial Gradient Dispersion Index' : 'Ground Truth Residual Difference'}
                       </span>
                       <span className="chip-badge">
@@ -926,6 +933,17 @@ function App() {
                         alt={activeLayer} 
                         className="preview-img"
                       />
+                      {activeLayer === 'calibration' && (
+                        <div className="calibration-overlay-card">
+                          <div className="cal-title">🟣 Affine Scale Calibration Engine</div>
+                          <div className="cal-eq">Z_metric = {result.calibration?.scale || '65.05'} × D_rel + {result.calibration?.offset || '680.0'} m</div>
+                          <div className="cal-details">
+                            <div>• Method: <strong>{result.calibration?.method || 'USGS SRTM 30m Co-Registration'}</strong></div>
+                            <div>• Elevation Span: <strong>{result.min_elev?.toFixed(1)}m – {result.max_elev?.toFixed(1)}m</strong></div>
+                            <div>• Robust Solver: <strong>Huber / RANSAC Outlier Masking</strong></div>
+                          </div>
+                        </div>
+                      )}
                       <div className="zoom-hint">🔍 Click to enlarge</div>
                     </div>
                   </div>

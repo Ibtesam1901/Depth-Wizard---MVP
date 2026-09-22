@@ -8,24 +8,40 @@ from typing import Dict, Any, Tuple
 def calculate_slope_map(
     dsm: np.ndarray,
     pixel_spacing_x: float = 1.0,
-    pixel_spacing_y: float = 1.0
+    pixel_spacing_y: float = 1.0,
+    crs: str = None,
+    latitude: float = 20.0
 ) -> Tuple[np.ndarray, Dict[str, float], str]:
     """
     Computes topographic surface slope in degrees using 2D spatial gradients.
+    Automatically converts geographic degrees (EPSG:4326) to physical ground meters.
     
     Parameters:
         dsm: 2D numpy array of elevation (meters or relative units)
-        pixel_spacing_x: Ground resolution along X (meters)
-        pixel_spacing_y: Ground resolution along Y (meters)
+        pixel_spacing_x: Ground resolution along X (meters or degrees)
+        pixel_spacing_y: Ground resolution along Y (meters or degrees)
+        crs: Coordinate Reference System string
+        latitude: Center scene latitude (for longitude cosine projection)
         
     Returns:
         slope_deg: 2D float32 array of slope in degrees [0, 90]
         stats: dictionary with min_slope, max_slope, mean_slope, median_slope
         base64_img: colorized PNG slope map
     """
-    # Guard against invalid spacing
-    dx = max(float(pixel_spacing_x), 0.01)
-    dy = max(float(pixel_spacing_y), 0.01)
+    dx = abs(float(pixel_spacing_x))
+    dy = abs(float(pixel_spacing_y))
+
+    # Detect geographic CRS (degrees) and convert to ground meters
+    is_geographic = (crs and ("4326" in crs or "WGS 84" in crs or "EPSG:4326" in crs)) or (dx < 0.05 and dy < 0.05)
+    if is_geographic:
+        # 1 degree latitude ~ 111,320 meters
+        # 1 degree longitude ~ 111,320 * cos(lat) meters
+        lat_rad = np.radians(float(latitude) if latitude is not None else 20.0)
+        dy = max(dy * 111320.0, 0.1)
+        dx = max(dx * 111320.0 * np.cos(lat_rad), 0.1)
+    else:
+        dx = max(dx, 0.1)
+        dy = max(dy, 0.1)
 
     # Compute numerical gradients
     grad_y, grad_x = np.gradient(dsm, dy, dx)

@@ -200,10 +200,13 @@ async def process(
         dsm_type = "metric" if metric_dsm is not None else "relative"
 
         # 6. Topographic Slope Map Generation
+        center_lat = (geo_metadata["bounds"]["bottom"] + geo_metadata["bounds"]["top"]) / 2.0 if (geo_metadata and geo_metadata.get("bounds")) else 20.0
         slope_deg, slope_stats, slope_b64 = calculate_slope_map(
             active_dsm,
             pixel_spacing_x=geo_metadata["resolution"]["x"] if is_geotiff else 1.0,
-            pixel_spacing_y=geo_metadata["resolution"]["y"] if is_geotiff else 1.0
+            pixel_spacing_y=geo_metadata["resolution"]["y"] if is_geotiff else 1.0,
+            crs=geo_metadata.get("crs") if is_geotiff else None,
+            latitude=center_lat
         )
 
         # 7. GeoTIFF Export Generation
