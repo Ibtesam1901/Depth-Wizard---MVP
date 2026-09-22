@@ -431,24 +431,11 @@ function App() {
         }
 
         img.onerror = () => {
-          const canvas = document.createElement('canvas')
-          canvas.width = gridW
-          canvas.height = gridH
-          const ctx = canvas.getContext('2d')
-          const imgData = ctx.createImageData(gridW, gridH)
-          for (let i = 0; i < gridW * gridH; i++) {
-            const v = (i % gridW) ^ ((i / gridW) | 0)
-            imgData.data[i * 4] = 60 + (v % 120)
-            imgData.data[i * 4 + 1] = 80 + (v % 100)
-            imgData.data[i * 4 + 2] = 110 + (v % 90)
-            imgData.data[i * 4 + 3] = 255
-          }
-          ctx.putImageData(imgData, 0, 0)
-          img.src = canvas.toDataURL()
+          reject(new Error("Could not decode image in browser. Standard PNG, JPG, or WebP formats are supported for client-side processing."))
         }
 
         if (isH5) {
-          img.onerror()
+          reject(new Error("HDF5 (.h5) scientific files contain raw multi-band sensor arrays that require the Python AI backend to extract. Connecting to server..."))
         } else {
           img.src = e.target.result
         }
@@ -482,7 +469,7 @@ function App() {
       const response = await fetch(`${endpoint}/process`, {
         method: 'POST',
         body: formData,
-        signal: AbortSignal.timeout(12000)
+        signal: AbortSignal.timeout(60000)
       })
 
       if (!response.ok) {
@@ -493,15 +480,21 @@ function App() {
       setResult(data)
       setActiveStage('estimation')
     } catch (err) {
-      console.warn('Cloud API unavailable or cold-starting; engaging resilient client-side edge processing:', err)
-      try {
-        const clientResult = await processImageClientSide(file)
-        setResult(clientResult)
-        setActiveStage('estimation')
-        setDownloadNotification('⚡ Processed via Edge Engine (Cloud backend is currently waking up)')
-        setTimeout(() => setDownloadNotification(null), 5000)
-      } catch (fallbackErr) {
-        alert(`Processing Alert: Could not process imagery: ${fallbackErr.message}`)
+      console.warn('Cloud API unavailable or cold-starting:', err)
+      const isH5File = file.name.toLowerCase().endsWith('.h5')
+      
+      if (isH5File) {
+        alert('Server Notice: The cloud backend is currently waking up from idle mode (takes ~30-40 seconds on Render free tier). Please retry in a few seconds once the server is warm!')
+      } else {
+        try {
+          const clientResult = await processImageClientSide(file)
+          setResult(clientResult)
+          setActiveStage('estimation')
+          setDownloadNotification('⚡ Processed via Edge Engine (Cloud backend waking up)')
+          setTimeout(() => setDownloadNotification(null), 5000)
+        } catch (fallbackErr) {
+          alert(`Processing Alert: ${fallbackErr.message}`)
+        }
       }
     } finally {
       clearTimeout(t1)
