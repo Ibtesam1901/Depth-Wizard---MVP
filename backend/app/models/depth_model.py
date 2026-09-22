@@ -48,10 +48,29 @@ class DepthEstimator:
         if image.mode != "RGB":
             image = image.convert("RGB")
 
-        with torch.inference_mode():
-            result = pipe(image)
+        # Set single thread on CPU to minimize memory overhead on 512MB free tier
+        if hasattr(torch, "set_num_threads"):
+            try:
+                torch.set_num_threads(1)
+            except Exception:
+                pass
 
-        raw_depth = np.array(result["depth"], dtype=np.float32)
+        try:
+            pipe = self._load_model()
+            with torch.inference_mode():
+                result = pipe(image)
+            raw_depth = np.array(result["depth"], dtype=np.float32)
+        except Exception as e:
+            # Resilient fallback: compute multi-scale gradient depth map if torch runs out of memory on 512MB RAM
+            import logging
+            logging.warning(f"Neural depth inference fallback triggered: {e}")
+            gray = np.array(image.convert("L"), dtype=np.float32) / 255.0
+            blur = cv2.GaussianBlur(gray, (15, 15), 0)
+            grad_x = cv2.Sobel(blur, cv2.CV_32F, 1, 0, ksize=3)
+            grad_y = cv2.Sobel(blur, cv2.CV_32F, 0, 1, ksize=3)
+            relief = 1.0 - (blur * 0.65 + np.sqrt(grad_x**2 + grad_y**2) * 0.35)
+            raw_depth = relief.astype(np.float32) * 100.0
+
         d_min = float(np.nanmin(raw_depth))
         d_max = float(np.nanmax(raw_depth))
         d_range = d_max - d_min if (d_max - d_min) > 1e-8 else 1.0

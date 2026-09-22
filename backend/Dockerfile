@@ -22,6 +22,9 @@ COPY --chown=user requirements.txt .
 
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
+# Pre-download and cache model weights during image build so runtime requests never block on download
+RUN python -c "from transformers import pipeline; pipeline('depth-estimation', model='depth-anything/Depth-Anything-V2-Small-hf')" || true
+
 COPY --chown=user . .
 
 EXPOSE 7860

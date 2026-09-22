@@ -37,10 +37,13 @@ function App() {
   })
 
   // Cloud API Endpoint Configuration
+  const isProductionHost = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  const defaultApiUrl = isProductionHost ? 'https://depth-wizard-mvp.onrender.com' : 'http://localhost:8000'
+
   const [apiUrl, setApiUrl] = useState(() => {
     return (typeof window !== 'undefined' && localStorage.getItem('depthwizard_api_url')) ||
       import.meta.env.VITE_API_URL ||
-      'http://localhost:8000'
+      defaultApiUrl
   })
   const [tempApiUrl, setTempApiUrl] = useState(apiUrl)
   const [showApiModal, setShowApiModal] = useState(false)
@@ -333,7 +336,11 @@ function App() {
       setResult(data)
       setActiveStage('estimation')
     } catch (err) {
-      alert(`Processing Error: ${err.message}. Please verify the backend is running.`)
+      if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+        alert(`Backend Notice: The cloud API (${apiUrl}) may be waking up from sleep (Render free-tier spins down after 15 min of inactivity, taking ~30-45s to wake). Please wait 30 seconds and retry, or click one of the instant SIH Demo Scenarios below!`)
+      } else {
+        alert(`Processing Alert: ${err.message}. Please verify the backend status.`)
+      }
     } finally {
       clearTimeout(t1)
       clearTimeout(t2)

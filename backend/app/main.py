@@ -139,7 +139,17 @@ async def process(
         elif is_h5:
             import h5py
             with h5py.File(temp_path, 'r') as f:
-                img_data = np.array(f[list(f.keys())[0]])
+                keys = list(f.keys())
+                key_to_use = "image" if "image" in keys else keys[0]
+                img_data = np.array(f[key_to_use])
+            if img_data.ndim == 3 and img_data.shape[0] in [1, 3, 4] and img_data.shape[0] < img_data.shape[2]:
+                img_data = np.transpose(img_data, (1, 2, 0))
+            if img_data.dtype != np.uint8:
+                d_min, d_max = float(np.nanmin(img_data)), float(np.nanmax(img_data))
+                if d_max > d_min:
+                    img_data = ((img_data - d_min) / (d_max - d_min) * 255.0).astype(np.uint8)
+                else:
+                    img_data = img_data.astype(np.uint8)
             pil_img = Image.fromarray(img_data).convert("RGB")
             geo_transform, geo_crs = None, None
         else:
