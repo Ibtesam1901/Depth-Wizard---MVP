@@ -1,0 +1,12 @@
+{
+  "name": "Semi-Arid Plateau & Flatlands",
+  "location": "Deccan Traps (16.8302\u00b0 N, 75.7100\u00b0 E)",
+  "description": "Open semi-arid terrain with sparse vegetation, gentle planar gradients, and high radiometric uniformity.",
+  "relief_range": "580m - 604m",
+  "source_sensor": "Resourcesat-2 LISS-4 (5.8m)",
+  "ground_resolution": "5.0m",
+  "crs": "EPSG:4326",
+  "rmse": 1.74,
+  "mae": 1.18,
+  "correlation": 0.978
+}

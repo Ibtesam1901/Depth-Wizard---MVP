@@ -1,0 +1,12 @@
+{
+  "name": "High-Relief Mountain Ridge",
+  "location": "Western Ghats Escarpment (14.2150\u00b0 N, 74.8820\u00b0 E)",
+  "description": "Complex terrain with steep slopes (>35\u00b0), deep V-valleys, ridge lines, and varying aspect illumination.",
+  "relief_range": "320m - 890m",
+  "source_sensor": "Sentinel-2 MultiSpectral (10m)",
+  "ground_resolution": "10.0m",
+  "crs": "EPSG:32643",
+  "rmse": 5.48,
+  "mae": 3.92,
+  "correlation": 0.923
+}

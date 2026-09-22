@@ -1,0 +1,12 @@
+{
+  "name": "Urban Canyon & Commercial Structures",
+  "location": "Bengaluru Central (12.9716\u00b0 N, 77.5946\u00b0 E)",
+  "description": "Dense urban grid featuring commercial multi-story buildings, flat asphalt, and sharp roof parapets.",
+  "relief_range": "15m - 68m",
+  "source_sensor": "Cartosat-3 Optical (0.28m PAN / 1.12m MX)",
+  "ground_resolution": "0.5m",
+  "crs": "EPSG:32643",
+  "rmse": 4.12,
+  "mae": 2.85,
+  "correlation": 0.941
+}

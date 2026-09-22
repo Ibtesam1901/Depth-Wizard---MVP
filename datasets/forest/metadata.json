@@ -1,0 +1,12 @@
+{
+  "name": "Dense Deciduous Forest Canopy",
+  "location": "Nilgiri Biosphere Reserve (11.5200\u00b0 N, 76.5400\u00b0 E)",
+  "description": "Continuous closed tree canopy where height estimation evaluates top-of-canopy surface (DSM/CHM).",
+  "relief_range": "910m - 985m",
+  "source_sensor": "Landsat-9 OLI-2 (15m PAN / 30m MS)",
+  "ground_resolution": "15.0m",
+  "crs": "EPSG:4326",
+  "rmse": 4.89,
+  "mae": 3.41,
+  "correlation": 0.912
+}
